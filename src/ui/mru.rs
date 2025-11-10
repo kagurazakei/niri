@@ -1144,7 +1144,7 @@ impl WindowMruUi {
                     // offscreens showing the same window (possibly in addition to the window
                     // itself).
                     //
-                    // Anyhow, this is not very noticable since Alt-Tab closing happens quickly.
+                    // Anyhow, this is not very noticeable since Alt-Tab closing happens quickly.
                     Some(WindowMruUiRenderElement::Offscreen(elem.with_alpha(alpha)))
                 }
                 Err(err) => {
@@ -1746,7 +1746,7 @@ fn generate_scope_panels(
             }
             let text = match scope {
                 MruScope::All => format!("{span_shortcut}A{span_shortcut_end}ll"),
-                MruScope::Output => format!("{span_shortcut}O{span_shortcut_end}utput"),
+                MruScope::Output => format!("{span_shortcut}O{span_shortcut_end}output"),
                 MruScope::Workspace => format!("{span_shortcut}W{span_shortcut_end}orkspace"),
             };
             buf.push_str(&text);
