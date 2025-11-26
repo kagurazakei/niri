@@ -4,7 +4,9 @@ use niri_config::Blur;
 
 use smithay::backend::renderer::element::texture::TextureRenderElement;
 use smithay::backend::renderer::element::{Element, Id, Kind, RenderElement, UnderlyingStorage};
-use smithay::backend::renderer::gles::{GlesError, GlesFrame, GlesRenderer, GlesTexture, Uniform};
+use smithay::backend::renderer::gles::{
+    ffi, GlesError, GlesFrame, GlesRenderer, GlesTexture, Uniform,
+};
 use smithay::backend::renderer::utils::{CommitCounter, DamageSet, OpaqueRegions};
 use smithay::backend::renderer::Renderer;
 use smithay::utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform};
@@ -30,7 +32,9 @@ pub enum BlurRenderElement {
         noise: f32,
         scale: f64,
         output_size: Size<i32, Physical>,
+        config: Blur,
         output_transform: Transform,
+        alpha_tex: Option<GlesTexture>,
     },
     /// Use true blur.
     ///
@@ -71,6 +75,7 @@ impl BlurRenderElement {
         corner_radius: f32,
         scale: f64,
         config: Blur,
+        alpha_tex: Option<GlesTexture>,
     ) -> Self {
         let texture = fx_buffers.optimized_blur.clone();
 
@@ -103,6 +108,8 @@ impl BlurRenderElement {
             scale,
             output_size: fx_buffers.output_size,
             output_transform: fx_buffers.transform,
+            alpha_tex,
+            config,
         }
     }
 
@@ -339,6 +346,8 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                 scale,
                 output_size,
                 output_transform,
+                config,
+                alpha_tex,
             } => {
                 let downscaled_dst = Rectangle::new(
                     dst.loc,
@@ -367,9 +376,34 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                         Uniform::new("output_size", [output_size.w as f32, output_size.h as f32]),
                         Uniform::new("noise", *noise),
                         Uniform::new("alpha", self.alpha()),
-                        Uniform::new("ignore_alpha", 0.),
+                        Uniform::new(
+                            "ignore_alpha",
+                            if alpha_tex.is_some() {
+                                config.ignore_alpha.0 as f32
+                            } else {
+                                0.
+                            },
+                        ),
+                        Uniform::new("alpha_tex", 1),
                     ],
                 );
+
+                if let Some(alpha_tex) = alpha_tex {
+                    gles_frame.with_context(|gl| unsafe {
+                        gl.ActiveTexture(ffi::TEXTURE1);
+                        gl.BindTexture(ffi::TEXTURE_2D, alpha_tex.tex_id());
+                        gl.TexParameteri(
+                            ffi::TEXTURE_2D,
+                            ffi::TEXTURE_MIN_FILTER,
+                            ffi::LINEAR as i32,
+                        );
+                        gl.TexParameteri(
+                            ffi::TEXTURE_2D,
+                            ffi::TEXTURE_MAG_FILTER,
+                            ffi::LINEAR as i32,
+                        );
+                    })?;
+                }
 
                 let res = <TextureRenderElement<GlesTexture> as RenderElement<GlesRenderer>>::draw(
                     &tex.0,

@@ -250,14 +250,16 @@ impl MappedLayer {
             && matches!(self.surface.layer(), Layer::Top | Layer::Overlay))
         .then(|| {
             let fx_buffers = fx_buffers?;
+            let fx_buffers = fx_buffers.borrow();
+
             // TODO: respect sync point?
             let alpha_tex = gles_elems
                 .and_then(|gles_elems| {
-                    let transform = fx_buffers.borrow().transform();
+                    let transform = fx_buffers.transform();
 
                     render_to_texture(
                         renderer.as_gles_renderer(),
-                        transform.transform_size(fx_buffers.borrow().output_size()),
+                        transform.transform_size(fx_buffers.output_size()),
                         self.scale.into(),
                         Transform::Normal,
                         Fourcc::Abgr8888,
@@ -269,8 +271,9 @@ impl MappedLayer {
                 .map(|r| r.0);
 
             Some(
-                BlurRenderElement::new_true(
-                    fx_buffers,
+                BlurRenderElement::new_optimized(
+                    renderer,
+                    &fx_buffers,
                     Rectangle::new(location, self.size).to_i32_round(),
                     location.to_physical_precise_round(self.scale),
                     self.rules
@@ -279,7 +282,6 @@ impl MappedLayer {
                         .top_left,
                     self.scale,
                     self.blur_config,
-                    1.,
                     alpha_tex,
                 )
                 .into(),

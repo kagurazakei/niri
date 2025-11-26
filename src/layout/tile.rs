@@ -1602,7 +1602,7 @@ impl<W: LayoutElement> Tile<W> {
         focus_ring: bool,
         target: RenderTarget,
         fx_buffers: Option<EffectsFramebufffersUserData>,
-        overview_zoom: Option<f64>,
+        #[allow(unused)] overview_zoom: Option<f64>, // TODO: needed for true blur
     ) -> impl Iterator<Item = TileRenderElement<R>> + 'a {
         let _span = tracy_client::span!("Tile::render_inner");
 
@@ -1920,35 +1920,21 @@ impl<W: LayoutElement> Tile<W> {
             .on
             .then(|| {
                 let fx_buffers = fx_buffers?;
+                let fx_buffers = fx_buffers.borrow();
 
-                if self.focused_window().is_floating() {
-                    Some(
-                        BlurRenderElement::new_true(
-                            fx_buffers,
-                            blur_sample_area.to_i32_round(),
-                            window_render_loc.to_physical(self.scale).to_i32_round(),
-                            radius.top_left,
-                            self.scale,
-                            self.blur_config,
-                            overview_zoom.unwrap_or(1.),
-                            None,
-                        )
-                        .into(),
+                Some(
+                    BlurRenderElement::new_optimized(
+                        renderer,
+                        &fx_buffers,
+                        blur_sample_area.to_i32_round(),
+                        window_render_loc.to_physical(self.scale).to_i32_round(),
+                        radius.top_left,
+                        self.scale,
+                        self.blur_config,
+                        None,
                     )
-                } else {
-                    Some(
-                        BlurRenderElement::new_optimized(
-                            renderer,
-                            &fx_buffers.borrow_mut(),
-                            blur_sample_area.to_i32_round(),
-                            window_render_loc.to_physical(self.scale).to_i32_round(),
-                            radius.top_left,
-                            self.scale,
-                            self.blur_config,
-                        )
-                        .into(),
-                    )
-                }
+                    .into(),
+                )
             })
             .flatten()
             .into_iter();
