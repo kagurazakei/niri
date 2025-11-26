@@ -1709,14 +1709,10 @@ impl State {
                 });
             let scale = closest_representable_scale(scale.clamp(0.1, 10.));
 
-            let mut transform = panel_orientation(output)
+            let transform = panel_orientation(output)
                 + config
                     .map(|c| ipc_transform_to_smithay(c.transform))
                     .unwrap_or(Transform::Normal);
-            // FIXME: fix winit damage on other transforms.
-            if name.connector == "winit" {
-                transform = Transform::Flipped180;
-            }
 
             if output.current_scale().fractional_scale() != scale
                 || output.current_transform() != transform
@@ -3037,7 +3033,7 @@ impl Niri {
         });
         let scale = closest_representable_scale(scale.clamp(0.1, 10.));
 
-        let mut transform = panel_orientation(&output)
+        let transform = panel_orientation(&output)
             + c.map(|c| ipc_transform_to_smithay(c.transform))
                 .unwrap_or(Transform::Normal);
 
@@ -3046,11 +3042,6 @@ impl Niri {
             .unwrap_or(config.overview.backdrop_color)
             .to_array_unpremul();
         backdrop_color[3] = 1.;
-
-        // FIXME: fix winit damage on other transforms.
-        if name.connector == "winit" {
-            transform = Transform::Flipped180;
-        }
 
         let mut layout_config = c.and_then(|c| c.layout.clone());
         // Support the deprecated non-layout background-color key.

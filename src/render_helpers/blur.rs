@@ -73,7 +73,7 @@ pub struct EffectsFramebuffers {
     current_buffer: CurrentBuffer,
     /// Size of the output that this object runs on.
     output_size: Size<i32, Physical>,
-    /// The transform to be used for rendering the blur texture.
+    /// Transform of the output.
     transform: Transform,
 }
 
@@ -81,15 +81,6 @@ pub type EffectsFramebufffersUserData = Rc<RefCell<EffectsFramebuffers>>;
 
 fn get_rerender_at() -> Option<Instant> {
     Some(Instant::now() + Duration::from_millis(150))
-}
-
-fn transform_for_texture(t: Transform) -> Transform {
-    match t {
-        Transform::Normal | Transform::Flipped180 => Transform::Normal,
-        Transform::_90 | Transform::Flipped270 => Transform::_90,
-        Transform::_180 | Transform::Flipped => Transform::_180,
-        Transform::_270 | Transform::Flipped90 => Transform::_270,
-    }
 }
 
 impl EffectsFramebuffers {
@@ -120,28 +111,30 @@ impl EffectsFramebuffers {
     ///
     /// The framebuffers handles live inside the Output's user data, use [`Self::get`] to access
     /// them.
-    pub fn init_for_output(output: Output, renderer: &mut impl NiriRenderer) {
+    pub fn init_for_output(
+        output: &Output,
+        renderer: &mut impl NiriRenderer,
+        orientation: Option<Transform>,
+    ) {
         let renderer = renderer.as_gles_renderer();
-        let output_size = output.current_mode().unwrap().size;
+        let transform = orientation.unwrap_or_else(|| output.current_transform());
+        let texture_size = transform.transform_size(output.current_mode().unwrap().size);
 
-        fn create_buffer(
-            renderer: &mut GlesRenderer,
-            size: Size<i32, Physical>,
-        ) -> Result<GlesTexture, GlesError> {
+        let create_buffer = |renderer: &mut GlesRenderer, size: Size<i32, Physical>| {
             renderer.create_buffer(
                 Format::Abgr8888,
                 size.to_logical(1).to_buffer(1, Transform::Normal),
             )
-        }
+        };
 
         let this = EffectsFramebuffers {
-            optimized_blur: create_buffer(renderer, output_size).unwrap(),
+            optimized_blur: create_buffer(renderer, texture_size).unwrap(),
             optimized_blur_rerender_at: get_rerender_at(),
-            effects: create_buffer(renderer, output_size).unwrap(),
-            effects_swapped: create_buffer(renderer, output_size).unwrap(),
+            effects: create_buffer(renderer, texture_size).unwrap(),
+            effects_swapped: create_buffer(renderer, texture_size).unwrap(),
             current_buffer: CurrentBuffer::Normal,
-            output_size: output.current_mode().unwrap().size,
-            transform: transform_for_texture(output.current_transform()),
+            output_size: texture_size,
+            transform,
         };
 
         let user_data = output.user_data();
@@ -157,32 +150,32 @@ impl EffectsFramebuffers {
     pub fn update_for_output(
         output: &Output,
         renderer: &mut impl NiriRenderer,
+        orientation: Option<Transform>,
     ) -> Result<(), GlesError> {
         let renderer = renderer.as_gles_renderer();
         let Some(mut fx_buffers) = Self::get(output) else {
             warn!("attempting to update fx buffer on output that has none: {output:?}");
             return Ok(()); // TODO: error?
         };
-        let output_size = output.current_mode().unwrap().size;
 
-        fn create_buffer(
-            renderer: &mut GlesRenderer,
-            size: Size<i32, Physical>,
-        ) -> Result<GlesTexture, GlesError> {
+        let transform = orientation.unwrap_or_else(|| output.current_transform());
+        let texture_size = transform.transform_size(output.current_mode().unwrap().size);
+
+        let create_buffer = |renderer: &mut GlesRenderer, size: Size<i32, Physical>| {
             renderer.create_buffer(
                 Format::Abgr8888,
                 size.to_logical(1).to_buffer(1, Transform::Normal),
             )
-        }
+        };
 
         *fx_buffers = EffectsFramebuffers {
-            optimized_blur: create_buffer(renderer, output_size)?,
+            optimized_blur: create_buffer(renderer, texture_size)?,
             optimized_blur_rerender_at: get_rerender_at(),
-            effects: create_buffer(renderer, output_size)?,
-            effects_swapped: create_buffer(renderer, output_size)?,
+            effects: create_buffer(renderer, texture_size)?,
+            effects_swapped: create_buffer(renderer, texture_size)?,
             current_buffer: CurrentBuffer::Normal,
-            output_size: output.current_mode().unwrap().size,
-            transform: transform_for_texture(output.current_transform()),
+            output_size: texture_size,
+            transform,
         };
 
         Ok(())
@@ -230,7 +223,7 @@ impl EffectsFramebuffers {
             &mut fb,
             self.output_size,
             scale,
-            self.transform,
+            Transform::Normal,
             elements.iter(),
         )
         .expect("failed to render for optimized blur buffer");
@@ -363,6 +356,8 @@ pub(super) unsafe fn get_main_buffer_blur(
     }
 
     {
+        // TODO: need to rotate blur texture on transformed screens
+
         // NOTE: We are assured that the size of the effects texture is the same
         // as the bound fbo size, so blitting uses dst immediately
         gl.BindFramebuffer(ffi::DRAW_FRAMEBUFFER, sample_fbo);
@@ -426,6 +421,7 @@ pub(super) unsafe fn get_main_buffer_blur(
             0.5 / (tex_size.w as f32 / 2.0),
             0.5 / (tex_size.h as f32 / 2.0),
         ];
+
         for i in 0..passes {
             let (sample_buffer, render_buffer) = fx_buffers.buffers();
             let damage = dst_expanded.downscale(1 << (i + 1));

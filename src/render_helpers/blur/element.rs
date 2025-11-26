@@ -30,6 +30,7 @@ pub enum BlurRenderElement {
         noise: f32,
         scale: f64,
         output_size: Size<i32, Physical>,
+        output_transform: Transform,
     },
     /// Use true blur.
     ///
@@ -100,6 +101,7 @@ impl BlurRenderElement {
             noise: config.noise.0 as f32,
             scale,
             output_size: fx_buffers.output_size,
+            output_transform: fx_buffers.transform,
         }
     }
 
@@ -304,7 +306,7 @@ fn draw_true_blur(
         dst,
         damage,
         opaque_regions,
-        fx_buffers.transform,
+        Transform::Normal,
         alpha,
         program.as_ref(),
         &additional_uniforms,
@@ -327,6 +329,7 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                 noise,
                 scale,
                 output_size,
+                output_transform,
             } => {
                 let downscaled_dst = Rectangle::new(
                     dst.loc,
@@ -348,16 +351,17 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                 } else {
                     let program = Shaders::get_from_frame(gles_frame).blur_finish.clone();
                     let gles_frame: &mut GlesFrame = gles_frame;
+                    let geo = output_transform.transform_rect_in(dst, output_size);
                     gles_frame.override_default_tex_program(
                         program.unwrap(),
                         vec![
                             Uniform::new(
                                 "geo",
                                 [
-                                    dst.loc.x as f32,
-                                    dst.loc.y as f32,
-                                    dst.size.w as f32,
-                                    dst.size.h as f32,
+                                    geo.loc.x as f32,
+                                    geo.loc.y as f32,
+                                    geo.size.w as f32,
+                                    geo.size.h as f32,
                                 ],
                             ),
                             Uniform::new("corner_radius", *corner_radius),

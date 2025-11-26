@@ -1324,8 +1324,7 @@ impl Tty {
         }
 
         let render_node = device.render_node.unwrap_or(self.primary_render_node);
-        let mut renderer = self.gpu_manager.single_renderer(&render_node)?;
-        EffectsFramebuffers::init_for_output(output.clone(), &mut renderer);
+        let renderer = self.gpu_manager.single_renderer(&render_node)?;
         let egl_context = renderer.as_ref().egl_context();
         let render_formats = egl_context.dmabuf_render_formats();
 
@@ -1476,6 +1475,9 @@ impl Tty {
         assert!(res.is_none(), "crtc must not have already existed");
 
         niri.add_output(output.clone(), Some(refresh_interval(mode)), vrr_enabled);
+
+        let mut renderer = self.gpu_manager.single_renderer(&render_node)?;
+        EffectsFramebuffers::init_for_output(&output, &mut renderer, None);
 
         if niri.monitors_active {
             // Redraw the new monitor.
@@ -2430,7 +2432,7 @@ impl Tty {
                     match renderer {
                         Ok(mut renderer) => {
                             if let Err(e) =
-                                EffectsFramebuffers::update_for_output(&output, &mut renderer)
+                                EffectsFramebuffers::update_for_output(&output, &mut renderer, None)
                             {
                                 warn!("failed to update fx buffers after output resize: {e:?}");
                             } else {

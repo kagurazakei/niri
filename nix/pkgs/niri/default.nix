@@ -26,6 +26,7 @@
   withDinit ? false,
   withScreencastSupport ? true,
   withSystemd ? true,
+  self,
 }:
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../../../Cargo.toml);
@@ -187,6 +188,12 @@ craneLib'.buildPackage (
         cargo-clippy = craneLib'.cargoClippy craneBuildArgs;
       };
     };
+
+    env =
+      craneBuildArgs.env
+      // (lib.optionalAttrs (self ? rev) {
+        NIRI_BUILD_COMMIT = self.rev;
+      });
 
     meta = {
       description = "Scrollable-tiling Wayland compositor";

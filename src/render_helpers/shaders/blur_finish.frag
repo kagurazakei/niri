@@ -71,10 +71,9 @@ void main() {
     // Since we are scr-ing a texture that is the size of the output, the v_coords are always
     // relative to the output. This corresponds to gl_FragCoord.
     vec2 size = geo.zw;
-    vec2 loc;
-    loc.x = gl_FragCoord.x - geo.x;
-    // FIXME: y inverted
-    loc.y = output_size.y - (gl_FragCoord.y + geo.y);
+    // NOTE: this is incorrect when rendering in winit, since y is inverted,
+    // but on tty produces the correct result, which is all that matters
+    vec2 loc = gl_FragCoord.xy - geo.xy;
 
     // Add noise fx
     // This can be used to achieve a glass look
