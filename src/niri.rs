@@ -598,22 +598,24 @@ pub struct PendingMruCommit {
 }
 
 impl RedrawState {
-    fn queue_redraw(self) -> Self {
+    fn queue_redraw(&mut self) {
         match self {
-            RedrawState::Idle => RedrawState::Queued,
+            RedrawState::Idle => {
+                *self = RedrawState::Queued;
+            }
             RedrawState::WaitingForEstimatedVBlank(token) => {
-                RedrawState::WaitingForEstimatedVBlankAndQueued(token)
+                *self = RedrawState::WaitingForEstimatedVBlankAndQueued(*token);
             }
 
             // A redraw is already queued.
-            value @ (RedrawState::Queued | RedrawState::WaitingForEstimatedVBlankAndQueued(_)) => {
-                value
-            }
+            RedrawState::Queued | RedrawState::WaitingForEstimatedVBlankAndQueued(_) => {}
 
             // We're waiting for VBlank, request a redraw afterwards.
-            RedrawState::WaitingForVBlank { .. } => RedrawState::WaitingForVBlank {
-                redraw_needed: true,
-            },
+            RedrawState::WaitingForVBlank { .. } => {
+                *self = RedrawState::WaitingForVBlank {
+                    redraw_needed: true,
+                };
+            }
         }
     }
 }
@@ -3852,14 +3854,14 @@ impl Niri {
     /// Schedules an immediate redraw on all outputs if one is not already scheduled.
     pub fn queue_redraw_all(&mut self) {
         for state in self.output_state.values_mut() {
-            state.redraw_state = mem::take(&mut state.redraw_state).queue_redraw();
+            state.redraw_state.queue_redraw();
         }
     }
 
     /// Schedules an immediate redraw if one is not already scheduled.
     pub fn queue_redraw(&mut self, output: &Output) {
         let state = self.output_state.get_mut(output).unwrap();
-        state.redraw_state = mem::take(&mut state.redraw_state).queue_redraw();
+        state.redraw_state.queue_redraw();
     }
 
     pub fn redraw_queued_outputs(&mut self, backend: &mut Backend) {

@@ -67,6 +67,7 @@ impl BlurRenderElement {
     /// [`EffectsFramebuffers::update_optimized_blur_buffer`] this element will either
     /// - Display outdated/wrong contents
     /// - Not display anything since the buffer will be empty.
+    #[allow(clippy::too_many_arguments)]
     pub fn new_optimized(
         renderer: &mut impl NiriRenderer,
         fx_buffers: &EffectsFramebuffers,
