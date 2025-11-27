@@ -655,7 +655,11 @@ impl<W: LayoutElement> Workspace<W> {
                 }
             }
             WorkspaceAddWindowTarget::NextTo(next_to) => {
-                let activate = activate.map_smart(|| self.active_window().unwrap().id() == next_to);
+                let activate = activate.map_smart(|| {
+                    self.active_window()
+                        .map(|w| w.id() == next_to)
+                        .unwrap_or(false)
+                });
 
                 let floating_has_window = self.floating.has_window(next_to);
 
