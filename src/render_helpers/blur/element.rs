@@ -99,6 +99,8 @@ impl Blur {
         self.config = config;
     }
 
+    // TODO: the alpha tex methods can probably do better / without clearing `self.inner` entirely
+
     pub fn clear_alpha_tex(&self) {
         if let Some(inner) = self.inner.borrow_mut().as_mut() {
             if self.alpha_tex.borrow().is_some() {
@@ -205,12 +207,20 @@ impl Blur {
             _ => true,
         };
 
+        let variant_needs_reconfigure = match &inner.variant {
+            BlurVariant::Optimized { texture } => {
+                texture.tex_id() != fx_buffers.optimized_blur.tex_id()
+            }
+            _ => false,
+        };
+
         // if nothing about our geometry changed, we don't need to re-render blur
         if inner.sample_area == sample_area
             && inner.geometry == geometry
             && inner.scale == scale
             && inner.corner_radius == corner_radius
             && inner.render_loc == render_loc
+            && !variant_needs_reconfigure
         {
             if variant_needs_rerender {
                 // If we are true blur, or if our output size changed, we need to always be
@@ -221,9 +231,13 @@ impl Blur {
             return Some(inner.clone());
         }
 
-        if let BlurVariant::True { rerender_at, .. } = &inner.variant {
-            rerender_at.set(None);
-        };
+        match &mut inner.variant {
+            BlurVariant::True { rerender_at, .. } => {
+                // force an immediate redraw of true blur on geometry changes
+                rerender_at.set(None);
+            }
+            BlurVariant::Optimized { texture } => *texture = fx_buffers.optimized_blur.clone(),
+        }
 
         inner.render_loc = render_loc;
         inner.sample_area = sample_area;
