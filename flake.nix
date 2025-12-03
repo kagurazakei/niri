@@ -84,6 +84,10 @@
         ourTests
         // {
           treefmt = treefmtEval.config.build.check self;
+
+          # build tests
+          build-niri = pkgs.niriPackages.niri;
+          build-niri-visual-tests = pkgs.niriPackages.niri-visual-tests;
         }
       );
 
