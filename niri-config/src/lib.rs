@@ -742,8 +742,6 @@ mod tests {
 
                 center-focused-column "on-overflow"
 
-                default-column-display "tabbed"
-
                 insert-hint {
                     color "rgb(255, 200, 127)"
                     gradient from="rgba(10, 20, 30, 1.0)" to="#0080ffff" relative-to="workspace-view"
@@ -818,7 +816,6 @@ mod tests {
                 open-floating false
                 open-focused true
                 default-window-height { fixed 500; }
-                default-column-display "tabbed"
                 default-floating-position x=100 y=-200 relative-to="bottom-left"
 
                 focus-ring {
@@ -1272,6 +1269,20 @@ mod tests {
                     inactive_gradient: None,
                     urgent_gradient: None,
                 },
+                blur: Blur {
+                    on: false,
+                    passes: 0,
+                    radius: FloatOrInt(
+                        0.0,
+                    ),
+                    noise: FloatOrInt(
+                        0.0,
+                    ),
+                    ignore_alpha: FloatOrInt(
+                        0.0,
+                    ),
+                    x_ray: false,
+                },
                 shadow: Shadow {
                     on: false,
                     offset: ShadowOffset {
@@ -1296,7 +1307,8 @@ mod tests {
                 tab_indicator: TabIndicator {
                     off: false,
                     hide_when_single_tab: false,
-                    place_within_column: false,
+                    hide_titles: false,
+                    title_font_size: 12,
                     gap: 5.0,
                     width: 10.0,
                     length: TabIndicatorLength {
@@ -1381,7 +1393,6 @@ mod tests {
                 center_focused_column: OnOverflow,
                 always_center_single_column: false,
                 empty_workspace_above_first: false,
-                default_column_display: Tabbed,
                 gaps: 8.0,
                 struts: Struts {
                     left: FloatOrInt(
@@ -1749,6 +1760,15 @@ mod tests {
                         inactive_gradient: None,
                         urgent_gradient: None,
                     },
+                    blur: BlurRule {
+                        off: false,
+                        on: false,
+                        passes: None,
+                        radius: None,
+                        noise: None,
+                        ignore_alpha: None,
+                        x_ray: None,
+                    },
                     shadow: ShadowRule {
                         off: false,
                         on: false,
@@ -1781,9 +1801,6 @@ mod tests {
                     baba_is_float: None,
                     block_out_from: None,
                     variable_refresh_rate: None,
-                    default_column_display: Some(
-                        Tabbed,
-                    ),
                     default_floating_position: Some(
                         FloatingPosition {
                             x: FloatOrInt(
@@ -1827,6 +1844,15 @@ mod tests {
                         draw_behind_window: None,
                         color: None,
                         inactive_color: None,
+                    },
+                    blur: BlurRule {
+                        off: false,
+                        on: false,
+                        passes: None,
+                        radius: None,
+                        noise: None,
+                        ignore_alpha: None,
+                        x_ray: None,
                     },
                     geometry_corner_radius: None,
                     place_within_backdrop: None,
@@ -2415,6 +2441,18 @@ mod tests {
         +            ],
         +        },
         +    ],
+
+        -            passes: 0,
+        +            passes: 4,
+
+        -                0.0,
+        +                12.0,
+
+        -                0.0,
+        +                0.04,
+
+        -                0.0,
+        +                0.8,
 
         -                0.3333333333333333,
         +                0.33333,

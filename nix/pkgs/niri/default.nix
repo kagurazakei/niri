@@ -1,22 +1,39 @@
 {
-  mkNiriDerivation,
+  craneLib,
+  dbus,
   lib,
+  mkNiriDerivation,
+  pipewire,
+  rustToolchain,
+  systemd,
   withDbus ? true,
   withDinit ? false,
   withScreencastSupport ? true,
   withSystemd ? true,
-  rustToolchain,
 }:
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../../../Cargo.toml);
 in
 mkNiriDerivation {
-  inherit
-    withDbus
-    withDinit
-    withScreencastSupport
-    withSystemd
-    ;
+  src =
+    let
+      niriFilter = path: type: builtins.match ".*niri-source/(resources|src).*" path != null;
+      srcFilter = path: type: (niriFilter path type) || (craneLib.filterCargoSources path type);
+    in
+    lib.cleanSourceWith {
+      src = builtins.path {
+        path = ../../../.;
+        name = "niri-source";
+      };
+      filter = srcFilter;
+      name = "source";
+    };
+
+  buildInputs =
+    lib.optional (withDbus || withScreencastSupport || withSystemd) dbus
+    ++ lib.optional withScreencastSupport pipewire
+    # Also includes libudev
+    ++ lib.optional withSystemd systemd;
 
   buildFeatures = builtins.concatStringsSep "," (
     lib.optional withDbus "dbus"

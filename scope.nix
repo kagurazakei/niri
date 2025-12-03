@@ -50,5 +50,7 @@ makeScopeWithSplicing' {
 
     niri = final.callPackage' ./nix/pkgs/niri { };
     niri-visual-tests = final.callPackage' ./nix/pkgs/niri-visual-tests { };
+    niri-config = final.callPackage' ./nix/pkgs/niri-config { };
+    niri-ipc = final.callPackage' ./nix/pkgs/niri-ipc { };
   };
 }

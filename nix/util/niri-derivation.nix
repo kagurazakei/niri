@@ -29,43 +29,14 @@
   overrideCraneArgs ? craneArgs: craneArgs,
   overrideCraneBuildArgs ? craneBuildArgs: craneBuildArgs,
   buildFeatures ? "",
-  withDbus ? true,
-  withDinit ? false,
-  withSystemd ? true,
-  withScreencastSupport ? true,
   ...
 }@args:
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../../Cargo.toml);
   craneArgs =
     let
-      workspaceBuildFeatures = builtins.concatStringsSep "," (
-        lib.optional withDbus "dbus"
-        ++ lib.optional withDinit "dinit"
-        ++ lib.optional withScreencastSupport "xdp-gnome-screencast"
-        ++ lib.optional withSystemd "systemd"
-      );
-
       craneArgsPre = overrideCraneArgs {
-        src =
-          let
-            niriFilter = path: type: builtins.match ".*niri-source/(resources|src).*" path != null;
-            niriVisualTestsFilter =
-              path: type: builtins.match ".*niri-source/niri-visual-tests/(resources|src).*" path != null;
-            srcFilter =
-              path: type:
-              (niriFilter path type)
-              || (craneLib.filterCargoSources path type)
-              || (niriVisualTestsFilter path type);
-          in
-          lib.cleanSourceWith {
-            src = builtins.path {
-              path = ../../.;
-              name = "niri-source";
-            };
-            filter = srcFilter;
-            name = "source";
-          };
+        inherit (args) src pname;
 
         nativeBuildInputs = [
           autoPatchelfHook
@@ -93,15 +64,11 @@ let
           pango
           wayland
         ]
-        ++ (args.buildInputs or [ ])
-        ++ lib.optional (withDbus || withScreencastSupport || withSystemd) dbus
-        ++ lib.optional withScreencastSupport pipewire
-        # Also includes libudev
-        ++ lib.optional withSystemd systemd;
+        ++ (args.buildInputs or [ ]);
 
         cargoExtraArgs =
-          "--locked --no-default-features"
-          + (lib.optionalString (workspaceBuildFeatures != "") " --features ${workspaceBuildFeatures}");
+          "--locked --package ${pname} --no-default-features"
+          + (lib.optionalString (buildFeatures != "") " --features ${buildFeatures}");
 
         # These tests require the ability to access a "valid EGL Display", but that won't work
         # inside the Nix sandbox
@@ -143,10 +110,6 @@ let
   craneBuildArgs = overrideCraneBuildArgs (
     craneArgs
     // {
-      cargoExtraArgs =
-        "--locked --package ${pname} --no-default-features"
-        + (lib.optionalString (buildFeatures != "") " --features ${buildFeatures}");
-
       inherit cargoArtifacts;
     }
   );
@@ -182,12 +145,11 @@ craneLib.buildPackage (
   }
   // (builtins.removeAttrs args [
     "buildFeatures"
+    "buildInputs"
+    "nativeBuildInputs"
     "overrideCraneArgs"
     "overrideCraneBuildArgs"
     "passthru"
-    "withDbus"
-    "withDinit"
-    "withScreencastSupport"
-    "withSystemd"
+    "runtimeDependencies"
   ])
 )
