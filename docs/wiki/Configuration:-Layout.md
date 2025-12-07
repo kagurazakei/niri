@@ -134,7 +134,7 @@ layout {
 
 <sup>Since: 0.1.9</sup>
 
-If set, niri will always center a single column on a workspace, regardless of the `center-focused-column` option.
+If set, niri will center the layout whenever it fits within the output. A single column stays centered, and if several columns (plus gaps) together take less width than the screen they are centered as a group, regardless of the `center-focused-column` option.
 
 ```kdl
 layout {

@@ -107,6 +107,12 @@ struct ColumnData {
     width: f64,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct CenteringTarget {
+    view_offset: f64,
+    view_pos: f64,
+}
+
 #[derive(Debug)]
 pub(super) enum ViewOffset {
     /// The view offset is static.
@@ -519,8 +525,20 @@ impl<W: LayoutElement> ScrollingSpace<W> {
     }
 
     pub fn is_centering_focused_column(&self) -> bool {
-        self.options.layout.center_focused_column == CenterFocusedColumn::Always
-            || (self.options.layout.always_center_single_column && self.columns.len() <= 1)
+        if self.options.layout.center_focused_column == CenterFocusedColumn::Always {
+            return true;
+        }
+
+        if !self.options.layout.always_center_single_column {
+            return false;
+        }
+
+        if self.columns.len() <= 1 {
+            return true;
+        }
+
+        self.center_entire_layout_target(self.active_column_idx)
+            .is_some()
     }
 
     fn compute_new_view_offset_fit(
@@ -598,14 +616,87 @@ impl<W: LayoutElement> ScrollingSpace<W> {
         )
     }
 
+    fn layout_width_with_gaps(&self) -> Option<f64> {
+        if self.columns.is_empty() {
+            return None;
+        }
+
+        let gaps = self.options.layout.gaps;
+        let gap_count = self.columns.len().saturating_sub(1) as f64;
+        let widths: f64 = self.data.iter().map(|data| data.width).sum();
+
+        Some(widths + gaps * gap_count)
+    }
+
+    fn center_entire_layout_target(&self, idx: usize) -> Option<CenteringTarget> {
+        if !self.options.layout.always_center_single_column || self.columns.is_empty() {
+            return None;
+        }
+
+        let layout_width = self.layout_width_with_gaps()?;
+
+        let mode = self.columns[idx].sizing_mode();
+        if mode.is_fullscreen() {
+            return None;
+        }
+
+        let area = if mode.is_maximized() {
+            self.parent_area
+        } else {
+            self.working_area
+        };
+
+        // Small margin to avoid rounding errors flipping the condition at exact fit.
+        let safety_margin = 0.5;
+        if layout_width + safety_margin >= area.size.w {
+            return None;
+        }
+
+        let free_space = area.size.w - layout_width;
+        let view_pos = self.column_x(0) - free_space / 2. - area.loc.x;
+        let active_col_x = self.column_x(idx);
+
+        Some(CenteringTarget {
+            view_offset: view_pos - active_col_x,
+            view_pos,
+        })
+    }
+
+    fn centering_target(
+        &self,
+        target_x: Option<f64>,
+        idx: usize,
+    ) -> Option<CenteringTarget> {
+        if self.columns.is_empty() {
+            return None;
+        }
+
+        if let Some(target) = self.center_entire_layout_target(idx) {
+            return Some(target);
+        }
+
+        if self.options.layout.center_focused_column == CenterFocusedColumn::Always
+            || (self.options.layout.always_center_single_column && self.columns.len() <= 1)
+        {
+            let view_offset = self.compute_new_view_offset_for_column_centered(target_x, idx);
+            let view_pos = self.column_x(idx) + view_offset;
+            return Some(CenteringTarget {
+                view_offset,
+                view_pos,
+            });
+        }
+
+        None
+    }
+
     fn compute_new_view_offset_for_column(
         &self,
         target_x: Option<f64>,
         idx: usize,
         prev_idx: Option<usize>,
     ) -> f64 {
-        if self.is_centering_focused_column() {
-            return self.compute_new_view_offset_for_column_centered(target_x, idx);
+        if let Some(target) = self.centering_target(target_x, idx) {
+            return target.view_offset;
         }
 
         match self.options.layout.center_focused_column {
@@ -1299,14 +1390,8 @@ impl<W: LayoutElement> ScrollingSpace<W> {
 
                 // If this is an interactive resize commit of an active window, then we need to
                 // either preserve the view offset or adjust it accordingly.
-                let centered = self.is_centering_focused_column();
-
-                let width = self.data[col_idx].width;
-                let offset = if centered {
-                    // FIXME: when view_offset becomes fractional, this can be made additive too.
-                    let new_offset =
-                        -(self.working_area.size.w - width) / 2. - self.working_area.loc.x;
-                    new_offset - self.view_offset.target()
+                let offset = if let Some(target) = self.centering_target(None, col_idx) {
+                    target.view_offset - self.view_offset.target()
                 } else if resize.edges.contains(ResizeEdge::LEFT) {
                     -offset
                 } else {
@@ -2568,11 +2653,15 @@ impl<W: LayoutElement> ScrollingSpace<W> {
             return;
         }
 
-        self.animate_view_offset_to_column_centered(
-            None,
-            self.active_column_idx,
-            self.options.animations.horizontal_view_movement.0,
-        );
+        if let Some(target) = self.centering_target(None, self.active_column_idx) {
+            self.animate_view_offset(self.active_column_idx, target.view_offset);
+        } else {
+            self.animate_view_offset_to_column_centered(
+                None,
+                self.active_column_idx,
+                self.options.animations.horizontal_view_movement.0,
+            );
+        }
 
         let col = &mut self.columns[self.active_column_idx];
         cancel_resize_for_column(&mut self.interactive_resize, col);
@@ -3522,29 +3611,13 @@ impl<W: LayoutElement> ScrollingSpace<W> {
         let mut snapping_points = Vec::new();
 
         if self.is_centering_focused_column() {
-            let mut col_x = 0.;
-            for (col_idx, col) in self.columns.iter().enumerate() {
-                let col_w = col.width();
-                let mode = col.sizing_mode();
-
-                let area = if mode.is_maximized() {
-                    self.parent_area
-                } else {
-                    self.working_area
-                };
-
-                let left_strut = area.loc.x;
-
-                let view_pos = if mode.is_fullscreen() {
-                    col_x
-                } else if area.size.w <= col_w {
-                    col_x - left_strut
-                } else {
-                    col_x - (area.size.w - col_w) / 2. - left_strut
-                };
-                snapping_points.push(Snap { view_pos, col_idx });
-
-                col_x += col_w + self.options.layout.gaps;
+            for col_idx in 0..self.columns.len() {
+                if let Some(target) = self.centering_target(None, col_idx) {
+                    snapping_points.push(Snap {
+                        view_pos: target.view_pos,
+                        col_idx,
+                    });
+                }
             }
         } else {
             let center_on_overflow = matches!(
