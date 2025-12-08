@@ -116,13 +116,27 @@
           default = pkgs.mkShell {
             inputsFrom = builtins.attrValues ourPackages;
 
-            packages = [
-              pkgs.rustPlatform.bindgenHook
-              pkgs.pkg-config
-              pkgs.wrapGAppsHook4 # For `niri-visual-tests`
-              pkgs.cargo-insta
-              treefmt
-            ];
+            packages =
+              let
+                perf = pkgs.perf.override {
+                  binutils-unwrapped = pkgs.llvmPackages.bintools-unwrapped;
+                };
+
+                cargo-flamegraph = pkgs.cargo-flamegraph.override {
+                  inherit perf;
+                };
+              in
+              [
+                pkgs.cargo-insta
+                pkgs.flamegraph
+                pkgs.pkg-config
+                pkgs.rustPlatform.bindgenHook
+                pkgs.wrapGAppsHook4 # For `niri-visual-tests`
+
+                cargo-flamegraph
+                perf
+                treefmt
+              ];
 
             buildInputs = [
               pkgs.libadwaita # For `niri-visual-tests`
