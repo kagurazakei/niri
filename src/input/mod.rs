@@ -467,9 +467,9 @@ impl State {
                                 | Keysym::Alt_R
                         )
                     {
-                        return FilterResult::Forward;
+                        return ShouldInterceptResult::Forward;
                     } else {
-                        return FilterResult::Intercept(None);
+                        return ShouldInterceptResult::InterceptOnly;
                     }
                 }
 
