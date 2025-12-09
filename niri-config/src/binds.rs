@@ -156,6 +156,7 @@ pub enum Action {
     #[knuffel(skip)]
     CloseWindowById(u64),
     ToggleGroup,
+    ToggleColumnTabbedDisplay,
     MoveWindowIntoOrOutOfGroup(#[knuffel(argument)] WindowMoveDirection),
     FocusNextWindow,
     FocusPreviousWindow,

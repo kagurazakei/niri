@@ -521,6 +521,39 @@ pub fn show_screenshot_notification(image_path: Option<&Path>) -> anyhow::Result
     Ok(())
 }
 
+#[cfg(feature = "dbus")]
+pub fn show_command_removed_notification(message: &str) -> anyhow::Result<()> {
+    use std::collections::HashMap;
+
+    use zbus::zvariant;
+
+    let conn = zbus::blocking::Connection::session()?;
+
+    let actions: &[&str] = &[];
+
+    conn.call_method(
+        Some("org.freedesktop.Notifications"),
+        "/org/freedesktop/Notifications",
+        Some("org.freedesktop.Notifications"),
+        "Notify",
+        &(
+            "niri",
+            0u32,
+            "",
+            "Command removed",
+            message,
+            actions,
+            HashMap::from([
+                ("transient", zvariant::Value::Bool(true)),
+                ("urgency", zvariant::Value::U8(1)),
+            ]),
+            -1,
+        ),
+    )?;
+
+    Ok(())
+}
+
 #[inline(never)]
 pub fn cause_panic() {
     let a = Duration::from_secs(1);

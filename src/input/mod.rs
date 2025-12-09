@@ -840,6 +840,19 @@ impl State {
                     mapped.toplevel().send_close();
                 }
             }
+            Action::ToggleColumnTabbedDisplay => {
+                let message = "This command has been removed. Use \"move-window-into-or-out-of-group\" instead.";
+                warn!("{message}");
+
+                #[cfg(feature = "dbus")]
+                {
+                    if let Err(err) = crate::utils::show_command_removed_notification(message) {
+                        warn!("error showing removed command notification: {err:?}");
+                    }
+
+                    self.niri.a11y_announce(message.to_owned());
+                }
+            }
             Action::MoveWindowIntoOrOutOfGroup(direction) => {
                 self.niri
                     .layout
