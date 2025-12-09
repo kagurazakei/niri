@@ -4554,7 +4554,7 @@ impl<W: LayoutElement> Column<W> {
         //
         // 2. Unfullscreening a tabbed column with multiple tiles should restore the view offset
         //    correctly. This means waiting for *all* tiles to unfullscreen, because otherwise the
-        //    restored view offset will immediately get overwrite by the still screen-wide column
+        //    restored view offset will immediately get overwritten by the still screen-wide column
         //    (it uses the largest tile's width).
         //
         // 3. Changing a fullscreen tabbed column to normal should probably also restore the view
