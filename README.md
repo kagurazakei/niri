@@ -23,11 +23,6 @@ KP_Insert release=true allow-invalidation=false  { spawn-sh "wpctl set-mute @DEF
 
 These changes are not well tested, they work on my PC. It might result in worse performance with other hardware configurations and it might break with different monitor layouts / scaling. I am not a rust programmer, so if it doesn't work for you then don't use it or fix it yourself.
 
-Before you try it out, make sure to comment out this line in your keybinds, otherwise it will not start:
-```
-Mod+W { toggle-column-tabbed-display; }
-```
-
 This readme outlines the differences between this fork and upstream niri. For more info on upstream's version, check out
 the original repository: https://github.com/YaLTeR/niri.
 
