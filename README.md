@@ -93,3 +93,37 @@ binds {
 
 ## Disclaimer
 These changes are not well tested, they work on my PC. It might result in worse performance with other hardware configurations and it might break with different monitor layouts / scaling. I am not a rust programmer, so if it doesn't work for you then don't use it or fix it yourself. Most of the changes made here are other people's work that I just pulled together. I am not responsible for any damage caused by this fork, so use at your own risk.
+<br><br>
+
+# Installation
+
+## Debian 13
+
+Install dependencies:
+```
+sudo apt install rustup gcc clang \
+libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev \
+libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev \
+libseat-dev libpipewire-0.3-dev libpango1.0-dev libdisplay-info-dev
+rustup default stable
+cargo install cargo-deb
+```
+
+Build debian package:
+```
+git clone https://github.com/yayuuu/niri.git
+cd niri
+cargo deb
+```
+
+Install:
+```
+cd target/debian
+sudo dpkg -i niri_25.11.0-1_amd64.deb
+```
+<br><br>
+
+## Other distros
+
+Unfortunately I don't use other distros, so I don't know for sure how to install it. If you know, you can make a pull request to this repo and I'll blindly accept it.
+You should basically follow the same steps as you did to install the original niri, just change the repo URL to mine.
