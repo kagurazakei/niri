@@ -4,9 +4,12 @@
   <img height="600px" src="assets/screenshots/groups-blur.png" />
 </p>
 
-This repo houses a fork of niri, a scrollable tiling Wayland compositor.
+This repo houses a fork of niri, a scrollable tiling Wayland compositor. This readme outlines the differences between this fork and upstream niri. For more info on upstream's version, check out
+the original repository: https://github.com/YaLTeR/niri.
 
-This fork fixes the performance issues on a hardware which uses Intel GPU to output video and Nvidia GPU to render, so most of the laptops with hybrid graphics.
+## Performance
+This fork fixes the performance issues with native wayland apps and PROTON_USE_WAYLAND=1 on a hardware which uses Intel GPU to output video and Nvidia GPU to render, so most of the laptops with hybrid graphics.
+
 
 Brings blur behind windows (Naxdy's implementation https://github.com/Naxdy/niri)
 
@@ -23,8 +26,12 @@ KP_Insert release=true allow-invalidation=false  { spawn-sh "wpctl set-mute @DEF
 
 These changes are not well tested, they work on my PC. It might result in worse performance with other hardware configurations and it might break with different monitor layouts / scaling. I am not a rust programmer, so if it doesn't work for you then don't use it or fix it yourself.
 
+<<<<<<< HEAD
 This readme outlines the differences between this fork and upstream niri. For more info on upstream's version, check out
 the original repository: https://github.com/YaLTeR/niri.
+=======
+
+>>>>>>> 008eac66 (Updated readme)
 
 For maximum feature set, create a config file: .config/niri/unofficial.kdl and include it in your config.kdl:
 ```
