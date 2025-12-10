@@ -6,11 +6,13 @@ the original repository: https://github.com/YaLTeR/niri.
 
 ## Performance
 This fork fixes the performance issues with native wayland apps and PROTON_USE_WAYLAND=1 on a hardware which uses Intel GPU to output video and Nvidia GPU to render, so most of the laptops with hybrid graphics.
+
 ![Performance](assets/screenshots/perf.jpg)
 <br><br>
 
 ## Blur behind windows and window groups
 Brings blur behind windows and window groups (Naxdy's implementation https://github.com/Naxdy/niri)
+
 ![Blur](assets/screenshots/groups-blur.png)
 <br><br>
 
@@ -18,6 +20,7 @@ Brings blur behind windows and window groups (Naxdy's implementation https://git
 Improves always-center-single-column option to center any number of columns as long as they take less than a full screen width. Especially useful on ultrawide screens.
 
 Video preview:
+
 [![Center columns](https://img.youtube.com/vi/DDytn7EgzjY/0.jpg)](https://www.youtube.com/watch?v=DDytn7EgzjY)
 <br><br>
 
