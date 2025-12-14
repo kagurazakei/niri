@@ -259,7 +259,7 @@ pub struct Niri {
 
     // When false, we're idling with monitors powered off.
     pub monitors_active: bool,
-    /// Outputs (by connector name) turned off during automatic deactivation, to be restored later.
+    /// Outputs (by connector name) turned off during automatic monitor deactivation.
     pub monitors_off_outputs: HashSet<String>,
 
     /// Whether the laptop lid is closed.
@@ -3230,25 +3230,7 @@ impl Niri {
             return;
         }
 
-        // Mark connected outputs as off in config (similar to `niri msg output ... off`) and apply.
-        {
-            let mut config = self.config.borrow_mut();
-            for output in self.layout.outputs() {
-                let name = output.user_data().get::<OutputName>().unwrap();
-                let connector = name.connector.clone();
-                self.monitors_off_outputs.insert(connector.clone());
-                if let Some(cfg) = config.outputs.find_mut(name) {
-                    cfg.off = true;
-                } else {
-                    config.outputs.0.push(niri_config::Output {
-                        name: connector,
-                        off: true,
-                        ..Default::default()
-                    });
-                }
-            }
-        }
-        backend.on_output_config_changed(self);
+        backend.set_monitors_active(self, false);
 
         self.monitors_active = false;
     }
@@ -3258,30 +3240,9 @@ impl Niri {
             return;
         }
 
-        // Bring previously deactivated outputs back up by clearing `off` and apply.
-        {
-            let mut config = self.config.borrow_mut();
-            for name in self.monitors_off_outputs.drain() {
-                let output_name = OutputName {
-                    connector: name.clone(),
-                    make: None,
-                    model: None,
-                    serial: None,
-                };
-                if let Some(cfg) = config.outputs.find_mut(&output_name) {
-                    cfg.off = false;
-                } else {
-                    config.outputs.0.push(niri_config::Output {
-                        name,
-                        off: false,
-                        ..Default::default()
-                    });
-                }
-            }
-        }
-        backend.on_output_config_changed(self);
-
+        backend.set_monitors_active(self, true);
         self.monitors_active = true;
+        self.queue_redraw_all();
     }
 
     pub fn output_under(&self, pos: Point<f64, Logical>) -> Option<(&Output, Point<f64, Logical>)> {

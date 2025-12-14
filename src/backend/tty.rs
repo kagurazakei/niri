@@ -104,6 +104,7 @@ pub struct Tty {
     // Whether the debug tinting is enabled.
     debug_tint: bool,
     ipc_outputs: Arc<Mutex<IpcOutputMap>>,
+    outputs_suspended: bool,
 }
 
 pub type TtyRenderer<'render> = MultiRenderer<
@@ -507,6 +508,7 @@ impl Tty {
             update_ignored_nodes_on_resume: false,
             debug_tint: false,
             ipc_outputs: Arc::new(Mutex::new(HashMap::new())),
+            outputs_suspended: false,
         })
     }
 
@@ -704,7 +706,7 @@ impl Tty {
 
                 niri.notify_activity();
                 niri.monitors_active = true;
-                self.set_monitors_active(true);
+                self.set_monitors_active(niri, true);
                 niri.queue_redraw_all();
             }
         }
@@ -2190,7 +2192,33 @@ impl Tty {
         Some(device?.gbm.clone())
     }
 
-    pub fn set_monitors_active(&mut self, _active: bool) {}
+    pub fn set_monitors_active(&mut self, niri: &mut Niri, active: bool) {
+        // This variant removes and re-adds outputs like a config toggle, but without touching config.
+        if active {
+            self.outputs_suspended = false;
+            // Re-scan connectors and reconnect surfaces as needed.
+            let nodes: Vec<_> = self.devices.keys().copied().collect();
+            for node in nodes {
+                let dev_id = node.dev_id();
+                self.device_changed(dev_id, niri, true);
+            }
+            return;
+        }
+
+        self.outputs_suspended = true;
+
+        // Disconnect all current surfaces, mimicking `config off`.
+        let nodes: Vec<_> = self.devices.keys().copied().collect();
+        for node in nodes {
+            if let Some(device) = self.devices.get_mut(&node) {
+                let crtcs: Vec<_> = device.surfaces.keys().copied().collect();
+                let _ = device;
+                for crtc in crtcs {
+                    self.connector_disconnected(niri, node, crtc);
+                }
+            }
+        }
+    }
 
     pub fn set_output_on_demand_vrr(&mut self, niri: &mut Niri, output: &Output, enable_vrr: bool) {
         let _span = tracy_client::span!("Tty::set_output_on_demand_vrr");
@@ -2297,6 +2325,10 @@ impl Tty {
 
     pub fn on_output_config_changed(&mut self, niri: &mut Niri) {
         let _span = tracy_client::span!("Tty::on_output_config_changed");
+
+        if self.outputs_suspended {
+            return;
+        }
 
         // If we're inactive, we can't do anything, so just set a flag for later.
         if !self.session.is_active() {
