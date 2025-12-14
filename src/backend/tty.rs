@@ -2190,24 +2190,7 @@ impl Tty {
         Some(device?.gbm.clone())
     }
 
-    pub fn set_monitors_active(&mut self, active: bool) {
-        // We only disable the CRTC here, this will also reset the
-        // surface state so that the next call to `render_frame` will
-        // always produce a new frame and `queue_frame` will change
-        // the CRTC to active. This makes sure we always enable a CRTC
-        // within an atomic operation.
-        if active {
-            return;
-        }
-
-        for device in self.devices.values_mut() {
-            for surface in device.surfaces.values_mut() {
-                if let Err(err) = surface.compositor.clear() {
-                    warn!("error clearing drm surface: {err:?}");
-                }
-            }
-        }
-    }
+    pub fn set_monitors_active(&mut self, _active: bool) {}
 
     pub fn set_output_on_demand_vrr(&mut self, niri: &mut Niri, output: &Output, enable_vrr: bool) {
         let _span = tracy_client::span!("Tty::set_output_on_demand_vrr");
