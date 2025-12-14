@@ -938,6 +938,8 @@ impl<W: LayoutElement> Monitor<W> {
             return;
         };
 
+        workspace.clamp_scrolling_view_right_edge_if_overflowing();
+
         self.add_column(new_idx, column, activate);
     }
 
@@ -958,6 +960,8 @@ impl<W: LayoutElement> Monitor<W> {
         let Some(column) = workspace.remove_active_column() else {
             return;
         };
+
+        workspace.clamp_scrolling_view_right_edge_if_overflowing();
 
         self.add_column(new_idx, column, activate);
     }
@@ -984,6 +988,8 @@ impl<W: LayoutElement> Monitor<W> {
         let Some(column) = workspace.remove_active_column() else {
             return;
         };
+
+        workspace.clamp_scrolling_view_right_edge_if_overflowing();
 
         self.add_column(new_idx, column, activate);
     }

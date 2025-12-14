@@ -3487,6 +3487,8 @@ impl<W: LayoutElement> Layout<W> {
                 return;
             };
 
+            ws.clamp_scrolling_view_right_edge_if_overflowing();
+
             let workspace_idx = target_ws_idx
                 .unwrap_or(monitors[new_idx].active_workspace_idx)
                 .min(monitors[new_idx].workspaces.len() - 1);

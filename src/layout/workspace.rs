@@ -864,6 +864,12 @@ impl<W: LayoutElement> Workspace<W> {
         Some(column)
     }
 
+    pub fn clamp_scrolling_view_right_edge_if_overflowing(&mut self) {
+        if !self.floating_is_active.get() {
+            self.scrolling.clamp_view_right_edge_if_overflowing();
+        }
+    }
+
     pub fn resolve_default_width(
         &self,
         default_width: Option<Option<PresetSize>>,
