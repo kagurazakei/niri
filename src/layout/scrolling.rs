@@ -1156,10 +1156,15 @@ impl<W: LayoutElement> ScrollingSpace<W> {
             let area = self.view_area_for_alignment();
             let pixel = 1. / self.scale;
             if layout_width > area.size.w + pixel {
+                let current_view_left = self.target_view_pos();
+                let desired_view_left = area.loc.x - self.options.layout.gaps;
+                if current_view_left + pixel >= desired_view_left {
+                    return;
+                }
+
                 // Layout no longer fits: align viewport origin to the left edge of the current
                 // alignment area (stop centering), leaving the outer gap.
-                let new_view_offset =
-                    area.loc.x - self.options.layout.gaps - self.column_x(self.active_column_idx);
+                let new_view_offset = desired_view_left - self.column_x(self.active_column_idx);
                 self.animate_view_offset(self.active_column_idx, new_view_offset);
             }
         }
