@@ -898,6 +898,12 @@ impl<W: LayoutElement> ScrollingSpace<W> {
     ) {
         let new_view_offset = self.compute_new_view_offset_for_column(target_x, idx, prev_idx);
         self.animate_view_offset_with_config(idx, new_view_offset, config);
+
+        // Keep clamping in sync with centering logic invoked via this path, but avoid interfering
+        // with focus shifts (where prev_idx is Some(..)).
+        if prev_idx.is_none() {
+            self.clamp_view_right_edge_if_overflowing();
+        }
     }
 
     fn animate_view_offset_to_column(
