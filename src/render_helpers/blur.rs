@@ -379,7 +379,6 @@ pub(super) unsafe fn get_main_buffer_blur(
             sample_buffer.tex_id(),
             0,
         );
-        gl.Clear(ffi::COLOR_BUFFER_BIT);
         let status = gl.CheckFramebufferStatus(ffi::FRAMEBUFFER);
         if status != ffi::FRAMEBUFFER_COMPLETE {
             gl.DeleteFramebuffers(1, &mut sample_fbo as *mut _);
@@ -500,7 +499,6 @@ pub(super) unsafe fn get_main_buffer_blur(
             texture_cache.tex_id(),
             0,
         );
-        gl.Clear(ffi::COLOR_BUFFER_BIT);
         let status = gl.CheckFramebufferStatus(ffi::DRAW_FRAMEBUFFER);
         if status != ffi::FRAMEBUFFER_COMPLETE {
             gl.DeleteFramebuffers(1, &mut tex_cache_fbo as *mut _);
@@ -519,7 +517,6 @@ pub(super) unsafe fn get_main_buffer_blur(
             fx_buffers.effects.tex_id(),
             0,
         );
-        gl.Clear(ffi::COLOR_BUFFER_BIT);
         let status = gl.CheckFramebufferStatus(ffi::READ_FRAMEBUFFER);
         if status != ffi::FRAMEBUFFER_COMPLETE {
             gl.DeleteFramebuffers(1, &mut render_buffer_fbo as *mut _);
