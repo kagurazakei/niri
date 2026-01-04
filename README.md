@@ -130,6 +130,34 @@ sudo dpkg -i niri_25.11.0-1_amd64.deb
 ```
 <br><br>
 
+## Fedora
+
+Install dependencies:
+```
+sudo dnf install cargo gcc libudev-devel libgbm-devel \
+libxkbcommon-devel wayland-devel libinput-devel dbus-devel \
+systemd-devel libseat-devel pipewire-devel pango-devel \
+cairo-gobject-devel clang libdisplay-info-devel
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup default stable
+cargo install cargo-generate-rpm
+```
+
+Build fedora package:
+```
+git clone https://github.com/yayuuu/niri.git
+cd niri
+cargo generate-rpm
+```
+
+Install:
+```
+cd target/generate-rpm
+sudo rpm -i niri-25.11-1.x86_64.rpm
+```
+<br><br>
+
+
 ## Other distros
 
 Unfortunately I don't use other distros, so I don't know for sure how to install it. If you know, you can make a pull request to this repo and I'll blindly accept it.
