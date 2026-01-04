@@ -523,10 +523,6 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
 
                 // Update the blur buffers.
                 // We use gl ffi directly to circumvent some stuff done by smithay
-                if !config.optimized {
-                    rerender_at.set(None);
-                }
-
                 if rerender_at
                     .borrow()
                     .map(|r| r < Instant::now())
@@ -549,11 +545,7 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                         )
                     })??;
 
-                    if config.optimized {
-                        rerender_at.set(get_rerender_at(Some(config.fps.0 as f32)));
-                    } else {
-                        rerender_at.set(None);
-                    }
+                    rerender_at.set(get_rerender_at(Some(config.fps.0 as f32)));
                 };
 
                 gles_frame.render_texture_from_to(
