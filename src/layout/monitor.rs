@@ -1727,7 +1727,6 @@ impl<W: LayoutElement> Monitor<W> {
         for ((idx, ws), geo) in self.workspaces_with_render_geo_idx() {
             let force_optimized_blur = self.are_animations_ongoing()
                 || (overview_open && idx != self.active_workspace_idx);
-            let overview_zoom = if overview_open { Some(zoom) } else { None };
             // Macro instead of closure because ws and insert hint have different elem types.
             macro_rules! push_elem {
                 () => {{
@@ -1753,7 +1752,7 @@ impl<W: LayoutElement> Monitor<W> {
                 target,
                 focus_ring,
                 push_elem!(),
-                overview_zoom,
+                zoom,
                 force_optimized_blur,
             );
 
@@ -1769,7 +1768,7 @@ impl<W: LayoutElement> Monitor<W> {
                 target,
                 focus_ring,
                 push_elem!(),
-                overview_zoom,
+                zoom,
                 force_optimized_blur,
             );
         }

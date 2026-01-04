@@ -1735,7 +1735,7 @@ impl<W: LayoutElement> Workspace<W> {
         target: RenderTarget,
         focus_ring: bool,
         push: &mut dyn FnMut(WorkspaceRenderElement<R>),
-        overview_zoom: Option<f64>,
+        overview_zoom: f64,
         force_optimized_blur: bool,
     ) {
         let fx_buffers = self
@@ -1760,7 +1760,7 @@ impl<W: LayoutElement> Workspace<W> {
         target: RenderTarget,
         focus_ring: bool,
         push: &mut dyn FnMut(WorkspaceRenderElement<R>),
-        overview_zoom: Option<f64>,
+        overview_zoom: f64,
         force_optimized_blur: bool,
     ) {
         if !self.is_floating_visible() {

@@ -3494,7 +3494,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
         push: &mut dyn FnMut(ScrollingSpaceRenderElement<R>),
         force_optimized_blur: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
-        overview_zoom: Option<f64>,
+        overview_zoom: f64,
     ) {
         let scale = Scale::from(self.scale);
 
@@ -3537,7 +3537,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
                     &mut |elem| push(elem.into()),
                     force_optimized_blur,
                     fx_buffers.clone(),
-                    overview_zoom,
+                    Some(overview_zoom),
                 );
             }
         }
