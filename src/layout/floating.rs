@@ -1145,7 +1145,7 @@ impl<W: LayoutElement> FloatingSpace<W> {
         push: &mut dyn FnMut(FloatingSpaceRenderElement<R>),
         force_optimized_blur: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
-        overview_zoom: f64,
+        overview_zoom: Option<f64>,
     ) {
         let scale = Scale::from(self.scale);
 
@@ -1170,7 +1170,7 @@ impl<W: LayoutElement> FloatingSpace<W> {
                 &mut |elem| push(elem.into()),
                 force_optimized_blur,
                 fx_buffers.clone(),
-                Some(overview_zoom),
+                overview_zoom,
             );
         }
     }
