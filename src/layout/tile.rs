@@ -1878,7 +1878,7 @@ impl<W: LayoutElement> Tile<W> {
         }
 
         if let Some(fx_buffers) = fx_buffers {
-            let force_optimized_blur = self.resize_animation.is_some();
+            let force_optimized_blur = self.are_animations_ongoing();
             if let Some(elem) = self.blur.render(
                 renderer.as_gles_renderer(),
                 fx_buffers.clone(),
