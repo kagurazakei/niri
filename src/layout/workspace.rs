@@ -1736,6 +1736,7 @@ impl<W: LayoutElement> Workspace<W> {
         focus_ring: bool,
         push: &mut dyn FnMut(WorkspaceRenderElement<R>),
         overview_zoom: f64,
+        force_optimized_blur: bool,
     ) {
         let fx_buffers = self
             .current_output()
@@ -1747,6 +1748,7 @@ impl<W: LayoutElement> Workspace<W> {
             target,
             scrolling_focus_ring,
             &mut |elem| push(elem.into()),
+            force_optimized_blur,
             fx_buffers,
             overview_zoom,
         );
@@ -1759,6 +1761,7 @@ impl<W: LayoutElement> Workspace<W> {
         focus_ring: bool,
         push: &mut dyn FnMut(WorkspaceRenderElement<R>),
         overview_zoom: f64,
+        force_optimized_blur: bool,
     ) {
         if !self.is_floating_visible() {
             return;
@@ -1776,6 +1779,7 @@ impl<W: LayoutElement> Workspace<W> {
             target,
             floating_focus_ring,
             &mut |elem| push(elem.into()),
+            force_optimized_blur,
             fx_buffers,
             overview_zoom,
         );

@@ -3492,6 +3492,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
         target: RenderTarget,
         focus_ring: bool,
         push: &mut dyn FnMut(ScrollingSpaceRenderElement<R>),
+        force_optimized_blur: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: f64,
     ) {
@@ -3534,6 +3535,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
                     focus_ring,
                     target,
                     &mut |elem| push(elem.into()),
+                    force_optimized_blur,
                     fx_buffers.clone(),
                     Some(overview_zoom),
                 );

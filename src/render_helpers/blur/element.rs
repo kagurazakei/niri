@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use glam::{Mat3, Vec2};
-use niri_config::CornerRadius;
+use niri_config::{CornerRadius, FloatOrInt};
 
 use pango::glib::property::PropertySet;
 use smithay::backend::renderer::element::{Element, Id, Kind, RenderElement, UnderlyingStorage};
@@ -139,6 +139,11 @@ impl Blur {
             return None;
         }
 
+        let mut render_config = self.config;
+        if let Some(zoom) = overview_zoom {
+            render_config.radius = FloatOrInt(self.config.radius.0 * zoom as f64);
+        }
+
         if force_optimized {
             true_blur = false;
         } else {
@@ -182,13 +187,13 @@ impl Blur {
                 destination_area,
                 corner_radius,
                 scale,
-                self.config,
+                render_config,
                 geometry,
                 self.alpha_tex.borrow().clone(),
                 if true_blur {
                     BlurVariant::True {
                         fx_buffers: fx_buffers.clone(),
-                        config: self.config,
+                        config: render_config,
                         texture: tex_buffer()?,
                         rerender_at: Default::default(),
                     }
@@ -209,7 +214,7 @@ impl Blur {
             inner.variant = if true_blur {
                 BlurVariant::True {
                     fx_buffers: fx_buffers.clone(),
-                    config: self.config,
+                    config: render_config,
                     texture: tex_buffer()?,
                     rerender_at: Default::default(),
                 }
@@ -264,14 +269,26 @@ impl Blur {
             return Some(inner.clone());
         }
 
+        let mut damage_variant = false;
         match &mut inner.variant {
-            BlurVariant::True { rerender_at, .. } => {
+            BlurVariant::True {
+                config,
+                rerender_at,
+                ..
+            } => {
+                if *config != render_config {
+                    *config = render_config;
+                    damage_variant = true;
+                }
                 // force an immediate redraw of true blur on geometry changes
                 rerender_at.set(None);
             }
             BlurVariant::Optimized { texture } => *texture = fx_buffers.optimized_blur.clone(),
         }
 
+        if damage_variant {
+            inner.damage_all();
+        }
         inner.render_loc = render_loc;
         inner.sample_area = sample_area;
         inner.destination_area = destination_area;
@@ -279,7 +296,7 @@ impl Blur {
         inner.scale = scale;
         inner.geometry = geometry;
         inner.damage_all();
-        inner.update_uniforms(&fx_buffers, &self.config);
+        inner.update_uniforms(&fx_buffers, &render_config);
 
         Some(inner.clone())
     }

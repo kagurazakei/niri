@@ -4910,6 +4910,7 @@ impl<W: LayoutElement> Layout<W> {
                     zoom,
                 ));
             },
+            true,
             fx_buffers,
             Some(zoom),
         );

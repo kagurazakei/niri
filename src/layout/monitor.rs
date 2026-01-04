@@ -1722,8 +1722,11 @@ impl<W: LayoutElement> Monitor<W> {
 
         let zoom = self.overview_zoom();
         let insert_hint_render_loc = self.insert_hint_render_loc;
+        let overview_open = self.overview_progress.is_some();
 
-        for (ws, geo) in self.workspaces_with_render_geo() {
+        for ((idx, ws), geo) in self.workspaces_with_render_geo_idx() {
+            let force_optimized_blur = self.are_animations_ongoing()
+                || (overview_open && idx != self.active_workspace_idx);
             // Macro instead of closure because ws and insert hint have different elem types.
             macro_rules! push_elem {
                 () => {{
@@ -1744,7 +1747,14 @@ impl<W: LayoutElement> Monitor<W> {
                 }};
             }
 
-            ws.render_floating(renderer, target, focus_ring, push_elem!(), zoom);
+            ws.render_floating(
+                renderer,
+                target,
+                focus_ring,
+                push_elem!(),
+                zoom,
+                force_optimized_blur,
+            );
 
             if let Some(loc) = insert_hint_render_loc {
                 if loc.workspace == InsertWorkspace::Existing(ws.id()) {
@@ -1753,7 +1763,14 @@ impl<W: LayoutElement> Monitor<W> {
                 }
             }
 
-            ws.render_scrolling(renderer, target, focus_ring, push_elem!(), zoom);
+            ws.render_scrolling(
+                renderer,
+                target,
+                focus_ring,
+                push_elem!(),
+                zoom,
+                force_optimized_blur,
+            );
         }
     }
 

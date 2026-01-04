@@ -1607,6 +1607,7 @@ impl<W: LayoutElement> Tile<W> {
         focus_ring: bool,
         target: RenderTarget,
         push: &mut dyn FnMut(TileRenderElement<R>),
+        force_optimized_blur_global: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: Option<f64>,
     ) {
@@ -1878,8 +1879,9 @@ impl<W: LayoutElement> Tile<W> {
         }
 
         if let Some(fx_buffers) = fx_buffers {
-            let force_optimized_blur =
-                self.are_animations_ongoing() && !self.focused_window().is_floating();
+            let force_optimized_blur = (self.are_animations_ongoing()
+                || force_optimized_blur_global)
+                && !self.focused_window().is_floating();
             if let Some(elem) = self.blur.render(
                 renderer.as_gles_renderer(),
                 fx_buffers.clone(),
@@ -1910,6 +1912,7 @@ impl<W: LayoutElement> Tile<W> {
         focus_ring: bool,
         target: RenderTarget,
         push: &mut dyn FnMut(TileRenderElement<R>),
+        force_optimized_blur_global: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: Option<f64>,
     ) {
@@ -1935,6 +1938,7 @@ impl<W: LayoutElement> Tile<W> {
                 focus_ring,
                 target,
                 &mut |elem| elements.push(elem),
+                force_optimized_blur_global,
                 fx_buffers.clone(),
                 overview_zoom,
             );
@@ -1965,6 +1969,7 @@ impl<W: LayoutElement> Tile<W> {
                 focus_ring,
                 target,
                 &mut |elem| elements.push(elem),
+                force_optimized_blur_global,
                 fx_buffers.clone(),
                 overview_zoom,
             );
@@ -1991,6 +1996,7 @@ impl<W: LayoutElement> Tile<W> {
                 focus_ring,
                 target,
                 push,
+                force_optimized_blur_global,
                 fx_buffers,
                 overview_zoom,
             );
@@ -2014,6 +2020,7 @@ impl<W: LayoutElement> Tile<W> {
             false,
             RenderTarget::Output,
             &mut |elem| contents.push(elem),
+            false,
             None,
             None,
         );
@@ -2026,6 +2033,7 @@ impl<W: LayoutElement> Tile<W> {
             false,
             RenderTarget::Screencast,
             &mut |elem| blocked_out_contents.push(elem),
+            false,
             None,
             None,
         );

@@ -1143,6 +1143,7 @@ impl<W: LayoutElement> FloatingSpace<W> {
         focus_ring: bool,
 
         push: &mut dyn FnMut(FloatingSpaceRenderElement<R>),
+        force_optimized_blur: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: f64,
     ) {
@@ -1167,6 +1168,7 @@ impl<W: LayoutElement> FloatingSpace<W> {
                 focus_ring,
                 target,
                 &mut |elem| push(elem.into()),
+                force_optimized_blur,
                 fx_buffers.clone(),
                 Some(overview_zoom),
             );
