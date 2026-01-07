@@ -4919,6 +4919,7 @@ impl<W: LayoutElement> Layout<W> {
             fx_buffers,
             overview_zoom,
             self.overview_progress.is_some(),
+            None,
         );
     }
 

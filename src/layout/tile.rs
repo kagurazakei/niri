@@ -1611,6 +1611,7 @@ impl<W: LayoutElement> Tile<W> {
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: Option<f64>,
         overview_zoom_use_render_loc_center: bool,
+        overview_zoom_offset: Option<Point<f64, Logical>>,
     ) {
         let _span = tracy_client::span!("Tile::render_inner");
 
@@ -1901,6 +1902,7 @@ impl<W: LayoutElement> Tile<W> {
                 window_render_loc,
                 overview_zoom,
                 overview_zoom_center,
+                overview_zoom_offset,
             ) {
                 push(elem.into());
             }
@@ -1923,6 +1925,7 @@ impl<W: LayoutElement> Tile<W> {
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: Option<f64>,
         overview_zoom_use_render_loc_center: bool,
+        overview_zoom_offset: Option<Point<f64, Logical>>,
     ) {
         let _span = tracy_client::span!("Tile::render");
 
@@ -1950,6 +1953,7 @@ impl<W: LayoutElement> Tile<W> {
                 fx_buffers.clone(),
                 overview_zoom,
                 overview_zoom_use_render_loc_center,
+                overview_zoom_offset,
             );
             match open.render(
                 renderer,
@@ -1982,6 +1986,7 @@ impl<W: LayoutElement> Tile<W> {
                 fx_buffers.clone(),
                 overview_zoom,
                 overview_zoom_use_render_loc_center,
+                overview_zoom_offset,
             );
             match alpha.offscreen.render(renderer, scale, &elements) {
                 Ok((elem, _sync, data)) => {
@@ -2010,6 +2015,7 @@ impl<W: LayoutElement> Tile<W> {
                 fx_buffers,
                 overview_zoom,
                 overview_zoom_use_render_loc_center,
+                overview_zoom_offset,
             );
         }
     }
@@ -2035,6 +2041,7 @@ impl<W: LayoutElement> Tile<W> {
             None,
             None,
             false,
+            None,
         );
 
         // A bit of a hack to render blocked out as for screencast, but I think it's fine here.
@@ -2049,6 +2056,7 @@ impl<W: LayoutElement> Tile<W> {
             None,
             None,
             false,
+            None,
         );
 
         RenderSnapshot {

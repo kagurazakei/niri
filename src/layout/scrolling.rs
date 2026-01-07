@@ -3495,6 +3495,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
         force_optimized_blur: bool,
         fx_buffers: Option<EffectsFramebuffersUserData>,
         overview_zoom: f64,
+        overview_zoom_offset: Option<Point<f64, Logical>>,
     ) {
         let scale = Scale::from(self.scale);
 
@@ -3539,6 +3540,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
                     fx_buffers.clone(),
                     Some(overview_zoom),
                     false,
+                    overview_zoom_offset,
                 );
             }
         }

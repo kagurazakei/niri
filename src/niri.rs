@@ -4551,11 +4551,147 @@ impl Niri {
         if let Some(mut fx_buffers) = EffectsFramebuffers::get(output) {
             let blur_config = self.config.borrow().layout.blur;
             if blur_config.radius.0 > 0. && blur_config.passes > 0 {
+                let overview_animating = zoom != 1.;
+                let rerender_fps = overview_animating.then_some({
+                    let mode_refresh = output.current_mode().map(|mode| mode.refresh as f32);
+                    let refresh_hz = mode_refresh.map(|mhz| mhz / 1000.0).unwrap_or(0.0);
+                    let target_fps = (blur_config.fps.0 as f32) * 4.0;
+                    if refresh_hz > 0.0 {
+                        target_fps.min(refresh_hz)
+                    } else {
+                        target_fps
+                    }
+                });
+                let mut blur_elements: Vec<OutputRenderElements<GlesRenderer>> = Vec::new();
+                let gles_renderer = renderer.as_gles_renderer();
+                let target = RenderTarget::Output;
+
+                macro_rules! push_popups_from_layer {
+                    ($layer:expr, $backdrop:expr, $push:expr) => {{
+                        self.render_layer_popups(
+                            gles_renderer,
+                            target,
+                            &layer_map,
+                            $layer,
+                            $backdrop,
+                            $push,
+                        );
+                    }};
+                }
+
+                macro_rules! push_normal_from_layer {
+                    ($layer:expr, $backdrop:expr, $push:expr) => {{
+                        self.render_layer_normal(
+                            gles_renderer,
+                            target,
+                            &layer_map,
+                            $layer,
+                            $backdrop,
+                            $push,
+                            None,
+                        );
+                    }};
+                }
+
+                // Overlay layer elements go first, like in the main render path.
+                push_popups_from_layer!(Layer::Overlay, false, &mut |elem| {
+                    blur_elements.push(elem.into())
+                });
+                push_normal_from_layer!(Layer::Overlay, false, &mut |elem| {
+                    blur_elements.push(elem.into())
+                });
+
+                if mon.render_above_top_layer() {
+                    push_popups_from_layer!(Layer::Top, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+                    push_normal_from_layer!(Layer::Top, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+
+                    push_popups_from_layer!(Layer::Bottom, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+                    push_popups_from_layer!(Layer::Background, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+                    push_normal_from_layer!(Layer::Bottom, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+                    push_normal_from_layer!(Layer::Background, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+
+                    if let Some((ws, _geo)) = mon.workspaces_with_render_geo().next() {
+                        blur_elements.push(ws.render_background().into());
+                    }
+                } else {
+                    push_popups_from_layer!(Layer::Top, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+                    push_normal_from_layer!(Layer::Top, false, &mut |elem| {
+                        blur_elements.push(elem.into())
+                    });
+
+                    macro_rules! process {
+                        ($geo:expr) => {{
+                            &mut |elem| {
+                                if let Some(elem) =
+                                    scale_relocate_crop(elem, output_scale, zoom, $geo)
+                                {
+                                    blur_elements.push(elem.into());
+                                }
+                            }
+                        }};
+                    }
+
+                    for (_ws, geo) in mon.workspaces_with_render_geo() {
+                        push_popups_from_layer!(Layer::Bottom, false, process!(geo));
+                        push_popups_from_layer!(Layer::Background, false, process!(geo));
+                    }
+
+                    for (ws, geo) in mon.workspaces_with_render_geo() {
+                        push_normal_from_layer!(Layer::Bottom, false, process!(geo));
+                        push_normal_from_layer!(Layer::Background, false, process!(geo));
+
+                        if let Some(elem) = scale_relocate_crop(
+                            ws.render_background(),
+                            output_scale,
+                            zoom,
+                            geo,
+                        ) {
+                            blur_elements.push(elem.into());
+                        }
+                    }
+                }
+
+                mon.render_workspace_shadows(gles_renderer, &mut |elem| {
+                    blur_elements.push(elem.into())
+                });
+
+                push_popups_from_layer!(Layer::Background, true, &mut |elem| {
+                    blur_elements.push(elem.into())
+                });
+                push_normal_from_layer!(Layer::Background, true, &mut |elem| {
+                    blur_elements.push(elem.into())
+                });
+
+                blur_elements.push(
+                    SolidColorRenderElement::from_buffer(
+                        &state.backdrop_buffer,
+                        (0., 0.),
+                        1.,
+                        Kind::Unspecified,
+                    )
+                    .into(),
+                );
+
                 if let Err(e) = fx_buffers.update_optimized_blur_buffer(
-                    renderer.as_gles_renderer(),
-                    layer_map,
+                    gles_renderer,
                     output_scale,
                     blur_config,
+                    rerender_fps,
+                    blur_elements.into_iter().rev(),
                 ) {
                     error!("failed to update optimized blur buffer: {e:?}");
                 };

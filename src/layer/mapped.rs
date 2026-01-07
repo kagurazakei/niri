@@ -293,6 +293,7 @@ impl MappedLayer {
                     blur_sample_area.loc.to_f64(),
                     None,
                     None,
+                    None,
                 )
                 .map(Into::into)
         })
