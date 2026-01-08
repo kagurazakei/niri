@@ -197,6 +197,13 @@ impl Blur {
 
         let mut inner = self.inner.borrow_mut();
 
+        if inner
+            .as_ref()
+            .is_some_and(|elem| elem.needs_fx_buffers_reset(&fx_buffers))
+        {
+            inner.take();
+        }
+
         let Some(inner) = inner.as_mut() else {
             let elem = BlurRenderElement::new(
                 &fx_buffers.borrow(),
@@ -443,6 +450,25 @@ impl BlurRenderElement {
 
     fn damage_all(&mut self) {
         self.commit.increment()
+    }
+
+    fn needs_fx_buffers_reset(&self, fx_buffers: &EffectsFramebuffersUserData) -> bool {
+        match &self.variant {
+            BlurVariant::True {
+                fx_buffers: old,
+                texture,
+                ..
+            } => {
+                if !Rc::ptr_eq(old, fx_buffers) {
+                    return true;
+                }
+
+                let output_size = fx_buffers.borrow().output_size();
+                let tex_size = texture.size();
+                tex_size.w != output_size.w || tex_size.h != output_size.h
+            }
+            BlurVariant::Optimized { .. } => false,
+        }
     }
 }
 
