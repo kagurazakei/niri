@@ -45,7 +45,7 @@ enum BlurVariant {
         texture: GlesTexture,
         fx_buffers: EffectsFramebuffersUserData,
         config: niri_config::Blur,
-        /// Timer to limit redraw rate of true blur. Currently set at 150ms fixed (~6.6 fps).
+        /// Timer to limit redraw rate of true blur.
         rerender_at: Rc<RefCell<Option<Instant>>>,
     },
 }
@@ -599,7 +599,7 @@ impl RenderElement<GlesRenderer> for BlurRenderElement {
                         )
                     })??;
 
-                    let fps = config.fps.0 as f32;
+                    let fps = config.true_blur_fps.0 as f32;
                     let fps = if fps > 0.0 { fps.max(15.0) } else { 15.0 };
                     rerender_at.set(get_rerender_at(Some(fps)));
                 };

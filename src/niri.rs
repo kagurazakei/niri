@@ -2643,7 +2643,7 @@ impl Niri {
             .unwrap();
 
         let initial_blur_interval = {
-            let fps = config_.layout.blur.fps.0 as f32;
+            let fps = config_.layout.blur.optimized_blur_fps.0 as f32;
             if fps > 0.0 {
                 Duration::from_secs_f32(1.0 / fps)
             } else {
@@ -2653,7 +2653,7 @@ impl Niri {
         event_loop
             .insert_source(Timer::from_duration(initial_blur_interval), |_, _, state| {
                 let blur_config = state.niri.config.borrow().layout.blur;
-                let fps = blur_config.fps.0 as f32;
+                let fps = blur_config.optimized_blur_fps.0 as f32;
                 let interval = if fps > 0.0 && blur_config.radius.0 > 0. && blur_config.passes > 0 {
                     state.niri.send_blur_frame_callbacks();
                     state.niri.queue_redraw_all();
@@ -4587,29 +4587,24 @@ impl Niri {
         if let Some(mut fx_buffers) = EffectsFramebuffers::get(output) {
             let blur_config = self.config.borrow().layout.blur;
             if blur_config.radius.0 > 0. && blur_config.passes > 0 {
-                let base_fps = blur_config.fps.0 as f32;
+                let base_fps = blur_config.optimized_blur_fps.0 as f32;
+                let animation_fps = blur_config.animation_blur_fps.0 as f32;
                 let overview_animating = zoom != 1.;
                 let workspace_switching = mon.workspace_switch_in_progress();
                 let mode_refresh = output.current_mode().map(|mode| mode.refresh as f32);
                 let refresh_hz = mode_refresh.map(|mhz| mhz / 1000.0).unwrap_or(0.0);
-                let (rerender_fps, allow_update) = if base_fps > 0.0 {
-                    let target_fps = if overview_animating || workspace_switching {
-                        base_fps * 4.0
-                    } else {
-                        base_fps
-                    };
+                let (rerender_fps, allow_update) = if overview_animating || workspace_switching {
                     let capped = if refresh_hz > 0.0 {
-                        target_fps.min(refresh_hz)
+                        animation_fps.min(refresh_hz)
                     } else {
-                        target_fps
+                        animation_fps
                     };
                     (Some(capped), true)
-                } else if overview_animating || workspace_switching {
-                    let target_fps: f32 = 60.0;
+                } else if base_fps > 0.0 {
                     let capped = if refresh_hz > 0.0 {
-                        target_fps.min(refresh_hz)
+                        base_fps.min(refresh_hz)
                     } else {
-                        target_fps
+                        base_fps
                     };
                     (Some(capped), true)
                 } else if self.layout.are_animations_ongoing(Some(output)) {
@@ -5283,7 +5278,7 @@ impl Niri {
         let _span = tracy_client::span!("Niri::send_blur_frame_callbacks");
 
         let blur_config = self.config.borrow().layout.blur;
-        let fps = blur_config.fps.0 as f32;
+        let fps = blur_config.optimized_blur_fps.0 as f32;
         if fps <= 0.0 || blur_config.radius.0 <= 0. || blur_config.passes == 0 {
             return;
         }
