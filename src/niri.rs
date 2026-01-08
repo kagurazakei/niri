@@ -580,6 +580,11 @@ struct SurfaceFrameThrottlingState {
     last_sent_at: RefCell<Option<(Output, u32)>>,
 }
 
+// Separate throttling for blur-driven callbacks so we don't interfere with the normal path.
+struct BlurFrameThrottlingState {
+    last_sent_at: RefCell<Option<Instant>>,
+}
+
 pub enum CenterCoords {
     Separately,
     Both,
@@ -627,6 +632,14 @@ impl RedrawState {
 }
 
 impl Default for SurfaceFrameThrottlingState {
+    fn default() -> Self {
+        Self {
+            last_sent_at: RefCell::new(None),
+        }
+    }
+}
+
+impl Default for BlurFrameThrottlingState {
     fn default() -> Self {
         Self {
             last_sent_at: RefCell::new(None),
@@ -2629,6 +2642,29 @@ impl Niri {
             )
             .unwrap();
 
+        let initial_blur_interval = {
+            let fps = config_.layout.blur.fps.0 as f32;
+            if fps > 0.0 {
+                Duration::from_secs_f32(1.0 / fps)
+            } else {
+                Duration::from_secs(1)
+            }
+        };
+        event_loop
+            .insert_source(Timer::from_duration(initial_blur_interval), |_, _, state| {
+                let blur_config = state.niri.config.borrow().layout.blur;
+                let fps = blur_config.fps.0 as f32;
+                let interval = if fps > 0.0 && blur_config.radius.0 > 0. && blur_config.passes > 0 {
+                    state.niri.send_blur_frame_callbacks();
+                    state.niri.queue_redraw_all();
+                    Duration::from_secs_f32(1.0 / fps)
+                } else {
+                    Duration::from_secs(1)
+                };
+                TimeoutAction::ToDuration(interval)
+            })
+            .unwrap();
+
         let socket_name = create_wayland_socket.then(|| {
             let socket_source = ListeningSocketSource::new_auto().unwrap();
             let socket_name = socket_source.socket_name().to_os_string();
@@ -4551,18 +4587,36 @@ impl Niri {
         if let Some(mut fx_buffers) = EffectsFramebuffers::get(output) {
             let blur_config = self.config.borrow().layout.blur;
             if blur_config.radius.0 > 0. && blur_config.passes > 0 {
+                let base_fps = blur_config.fps.0 as f32;
                 let overview_animating = zoom != 1.;
                 let workspace_switching = mon.workspace_switch_in_progress();
-                let rerender_fps = (overview_animating || workspace_switching).then_some({
-                    let mode_refresh = output.current_mode().map(|mode| mode.refresh as f32);
-                    let refresh_hz = mode_refresh.map(|mhz| mhz / 1000.0).unwrap_or(0.0);
-                    let target_fps = (blur_config.fps.0 as f32) * 4.0;
-                    if refresh_hz > 0.0 {
+                let mode_refresh = output.current_mode().map(|mode| mode.refresh as f32);
+                let refresh_hz = mode_refresh.map(|mhz| mhz / 1000.0).unwrap_or(0.0);
+                let (rerender_fps, allow_update) = if base_fps > 0.0 {
+                    let target_fps = if overview_animating || workspace_switching {
+                        base_fps * 4.0
+                    } else {
+                        base_fps
+                    };
+                    let capped = if refresh_hz > 0.0 {
                         target_fps.min(refresh_hz)
                     } else {
                         target_fps
-                    }
-                });
+                    };
+                    (Some(capped), true)
+                } else if overview_animating || workspace_switching {
+                    let target_fps: f32 = 60.0;
+                    let capped = if refresh_hz > 0.0 {
+                        target_fps.min(refresh_hz)
+                    } else {
+                        target_fps
+                    };
+                    (Some(capped), true)
+                } else if self.layout.are_animations_ongoing(Some(output)) {
+                    (None, true)
+                } else {
+                    (None, false)
+                };
                 let mut blur_elements: Vec<OutputRenderElements<GlesRenderer>> = Vec::new();
                 let gles_renderer = renderer.as_gles_renderer();
                 let target = RenderTarget::Output;
@@ -4687,15 +4741,17 @@ impl Niri {
                     .into(),
                 );
 
-                if let Err(e) = fx_buffers.update_optimized_blur_buffer(
-                    gles_renderer,
-                    output_scale,
-                    blur_config,
-                    rerender_fps,
-                    blur_elements.into_iter().rev(),
-                ) {
-                    error!("failed to update optimized blur buffer: {e:?}");
-                };
+                if allow_update {
+                    if let Err(e) = fx_buffers.update_optimized_blur_buffer(
+                        gles_renderer,
+                        output_scale,
+                        blur_config,
+                        rerender_fps,
+                        blur_elements.into_iter().rev(),
+                    ) {
+                        error!("failed to update optimized blur buffer: {e:?}");
+                    };
+                }
             }
         }
 
@@ -5222,6 +5278,47 @@ impl Niri {
             );
         }
     }
+
+    pub fn send_blur_frame_callbacks(&mut self) {
+        let _span = tracy_client::span!("Niri::send_blur_frame_callbacks");
+
+        let blur_config = self.config.borrow().layout.blur;
+        let fps = blur_config.fps.0 as f32;
+        if fps <= 0.0 || blur_config.radius.0 <= 0. || blur_config.passes == 0 {
+            return;
+        }
+
+        let interval = Duration::from_secs_f32(1.0 / fps);
+        let now = Instant::now();
+        let frame_callback_time = get_monotonic_time();
+
+        for (output, _) in self.output_state.iter() {
+            for surface in layer_map_for_output(output).layers() {
+                surface.send_frame(
+                    output,
+                    frame_callback_time,
+                    Some(interval),
+                    |_, states| {
+                        let throttling = states
+                            .data_map
+                            .get_or_insert(BlurFrameThrottlingState::default);
+                        let mut last_sent_at = throttling.last_sent_at.borrow_mut();
+
+                        let should_send = last_sent_at
+                            .map(|last| now.duration_since(last) >= interval)
+                            .unwrap_or(true);
+                        if should_send {
+                            *last_sent_at = Some(now);
+                            Some(output.clone())
+                        } else {
+                            None
+                        }
+                    },
+                );
+            }
+        }
+    }
+
 
     pub fn send_frame_callbacks_on_fallback_timer(&mut self) {
         let _span = tracy_client::span!("Niri::send_frame_callbacks_on_fallback_timer");

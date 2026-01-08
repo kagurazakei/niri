@@ -344,7 +344,7 @@ pub struct Blur {
     pub passes: u32,
     pub radius: FloatOrInt<0, 1024>,
     pub noise: FloatOrInt<0, 1024>,
-    pub fps: FloatOrInt<1, 1000>,
+    pub fps: FloatOrInt<0, 1000>,
     pub optimized: bool,
     pub brightness: FloatOrInt<0, 2>,
     pub contrast: FloatOrInt<0, 1024>,
@@ -715,7 +715,7 @@ pub struct BlurRule {
     #[knuffel(child, unwrap(argument))]
     pub noise: Option<FloatOrInt<0, 1024>>,
     #[knuffel(child, unwrap(argument))]
-    pub fps: Option<FloatOrInt<1, 1000>>,
+    pub fps: Option<FloatOrInt<0, 1000>>,
     #[knuffel(child, unwrap(argument))]
     pub optimized: Option<bool>,
     #[knuffel(child, unwrap(argument))]

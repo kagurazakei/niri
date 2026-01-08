@@ -58,6 +58,8 @@ pub struct EffectsFramebuffers {
     optimized_blur: GlesTexture,
     /// Whether the optimizer blur buffer is dirty
     optimized_blur_rerender_at: Option<Instant>,
+    /// Generation counter for optimized blur updates.
+    optimized_blur_generation: u64,
     // /// Contains the original pixels before blurring to draw with in case of artifacts.
     // blur_saved_pixels: GlesTexture,
     // The blur algorithms (dual-kawase) swaps between these two whenever scaling the image
@@ -135,6 +137,7 @@ impl EffectsFramebuffers {
         let this = EffectsFramebuffers {
             optimized_blur: create_buffer(renderer, texture_size).unwrap(),
             optimized_blur_rerender_at: get_rerender_at(None),
+            optimized_blur_generation: 0,
             effects: create_buffer(renderer, texture_size).unwrap(),
             effects_swapped: create_buffer(renderer, texture_size).unwrap(),
             current_buffer: CurrentBuffer::Normal,
@@ -176,6 +179,7 @@ impl EffectsFramebuffers {
         *fx_buffers = EffectsFramebuffers {
             optimized_blur: create_buffer(renderer, texture_size)?,
             optimized_blur_rerender_at: get_rerender_at(None),
+            optimized_blur_generation: 0,
             effects: create_buffer(renderer, texture_size)?,
             effects_swapped: create_buffer(renderer, texture_size)?,
             current_buffer: CurrentBuffer::Normal,
@@ -280,6 +284,8 @@ impl EffectsFramebuffers {
             TextureFilter::Linear,
         )?;
 
+        self.optimized_blur_generation = self.optimized_blur_generation.wrapping_add(1);
+
         Ok(())
     }
 
@@ -297,6 +303,10 @@ impl EffectsFramebuffers {
 
     pub fn transform(&self) -> Transform {
         self.transform
+    }
+
+    pub fn optimized_blur_generation(&self) -> u64 {
+        self.optimized_blur_generation
     }
 }
 

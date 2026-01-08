@@ -386,6 +386,7 @@ Enable it with `on` and adjust the blur strength with `passes`, `radius` and `no
 Set `optimized false` to force real-time blur for every window that uses this blur config, or override it per-window with a [`window-rule`](./Configuration:-Window-Rules.md).
 
 `fps` caps how often *true* blur (non-optimized) is re-rendered.
+Set `fps 0` to disable periodic optimized blur refreshes; it will still refresh during overview and workspace switch animations.
 The default matches the previous 150 ms timer (~6.7 fps).
 
 ```kdl
