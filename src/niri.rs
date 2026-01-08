@@ -4652,13 +4652,6 @@ impl Niri {
                 });
 
                 if mon.render_above_top_layer() {
-                    push_popups_from_layer!(Layer::Top, false, &mut |elem| {
-                        blur_elements.push(elem.into())
-                    });
-                    push_normal_from_layer!(Layer::Top, false, &mut |elem| {
-                        blur_elements.push(elem.into())
-                    });
-
                     push_popups_from_layer!(Layer::Bottom, false, &mut |elem| {
                         blur_elements.push(elem.into())
                     });
@@ -4676,13 +4669,6 @@ impl Niri {
                         blur_elements.push(ws.render_background().into());
                     }
                 } else {
-                    push_popups_from_layer!(Layer::Top, false, &mut |elem| {
-                        blur_elements.push(elem.into())
-                    });
-                    push_normal_from_layer!(Layer::Top, false, &mut |elem| {
-                        blur_elements.push(elem.into())
-                    });
-
                     macro_rules! process {
                         ($geo:expr) => {{
                             &mut |elem| {
