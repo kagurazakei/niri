@@ -1820,17 +1820,25 @@ impl Tty {
             return;
         };
 
-        // We waited for the timer, now we can send frame callbacks again.
-        output_state.frame_callback_sequence = output_state.frame_callback_sequence.wrapping_add(1);
-
         match mem::replace(&mut output_state.redraw_state, RedrawState::Idle) {
-            RedrawState::Idle => unreachable!(),
-            RedrawState::Queued => unreachable!(),
-            RedrawState::WaitingForVBlank { .. } => unreachable!(),
-            RedrawState::WaitingForEstimatedVBlank(_) => (),
+            RedrawState::WaitingForEstimatedVBlank(_) => {
+                // We waited for the timer, now we can send frame callbacks again.
+                output_state.frame_callback_sequence =
+                    output_state.frame_callback_sequence.wrapping_add(1);
+            }
             // The timer fired just in front of a redraw.
             RedrawState::WaitingForEstimatedVBlankAndQueued(_) => {
+                output_state.frame_callback_sequence =
+                    output_state.frame_callback_sequence.wrapping_add(1);
                 output_state.redraw_state = RedrawState::Queued;
+                return;
+            }
+            unexpected => {
+                debug!(
+                    "estimated vblank timer fired for {name} in unexpected redraw state: \
+                     {unexpected:?}"
+                );
+                output_state.redraw_state = unexpected;
                 return;
             }
         }
@@ -2311,12 +2319,7 @@ impl Tty {
         device.powered_down_surfaces.insert(tty_state.crtc, surface);
 
         if let Some(state) = niri.output_state.get_mut(output) {
-            let prev = mem::replace(&mut state.redraw_state, RedrawState::Idle);
-            if let RedrawState::WaitingForEstimatedVBlank(token)
-            | RedrawState::WaitingForEstimatedVBlankAndQueued(token) = prev
-            {
-                niri.event_loop.remove(token);
-            }
+            state.redraw_state = RedrawState::Idle;
         }
     }
 
