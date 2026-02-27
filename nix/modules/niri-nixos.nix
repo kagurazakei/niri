@@ -7,7 +7,7 @@
 }:
 
 let
-  cfg = config.programs.niri;
+  cfg = config.programs.niriBlur;
 in
 {
   options.programs.niri = lib.mkDefault {
