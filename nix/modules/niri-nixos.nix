@@ -10,12 +10,15 @@ let
   cfg = config.programs.niri;
 in
 {
-  options.programs.niri = {
+  options.programs.niri = lib.mkDefault {
     enable = lib.mkEnableOption "Custom Niri with overlay";
 
     withUWSM = lib.mkEnableOption "Enable UWSM support";
 
     withXDG = lib.mkEnableOption "Enable XDG portal support" // {
+      default = true;
+    };
+    useThunar = lib.mkEnableOption "Use Thunar integration" // {
       default = true;
     };
   };
@@ -32,7 +35,9 @@ in
     services.displayManager.sessionPackages = [
       pkgs.niriPackages.niri
     ];
+    services.xserver.desktopManager.runXdgAutostartIfNone = lib.mkDefault true;
 
+    services.dbus.packages = lib.mkIf cfg.useThunar [ pkgs.thunar ];
     # Required basics
     security.polkit.enable = true;
     programs.dconf.enable = lib.mkDefault true;
@@ -44,7 +49,7 @@ in
     programs.uwsm = lib.mkIf cfg.withUWSM {
       enable = true;
       waylandCompositors.niri = {
-        prettyName = "Niri";
+        prettyName = "Niri The Goat";
         comment = "Scrollable-tiling Wayland compositor";
         binPath = "${pkgs.niriPackages.niri}/bin/niri-session";
       };
