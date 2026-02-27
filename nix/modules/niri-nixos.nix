@@ -21,11 +21,13 @@ in
 
     package = mkPackageOption pkgs "niri" { };
 
-    useThunar = mkEnableOption "Nautilus as file chooser" // {
+    useThunar = mkEnableOption "Use Thunar integration" // {
       default = true;
     };
 
-    withUWSM = mkEnableOption "Enable UWSM support";
+    withUWSM = mkEnableOption "Enable UWSM support" // {
+      default = true;
+    };
 
     withXDG = mkEnableOption "Enable XDG portal support" // {
       default = true;
@@ -37,29 +39,20 @@ in
     {
       nixpkgs.overlays = [ overlay ];
 
-      programs.niri.package = pkgs.niriPackages.niri;
+      # Use overlay-provided niri
+      programs.niri.package = cfg.package;
 
-      environment.systemPackages = [
-        cfg.package
-      ];
-
-      services.dbus.packages = mkIf cfg.useThunar [ pkgs.thunar ];
-
-      services = {
-        displayManager.sessionPackages = [ cfg.package ];
-
-        gnome.gnome-keyring.enable = lib.mkDefault true;
-
-        graphical-desktop.enable = true;
-
-        xserver.desktopManager.runXdgAutostartIfNone = lib.mkDefault true;
-      };
+      services.displayManager.sessionPackages = [ cfg.package ];
 
       security.polkit.enable = true;
 
       programs.dconf.enable = lib.mkDefault true;
 
-      systemd.packages = [ cfg.package ];
+      services.gnome.gnome-keyring.enable = lib.mkDefault true;
+
+      services.xserver.desktopManager.runXdgAutostartIfNone = lib.mkDefault true;
+
+      services.dbus.packages = mkIf cfg.useThunar [ pkgs.thunar ];
     }
 
     (mkIf cfg.withUWSM {
@@ -67,9 +60,9 @@ in
         enable = true;
         waylandCompositors = {
           niri = {
-            prettyName = "Niri The Goat";
-            comment = "A scrollable-tiling Wayland compositor";
-            binPath = "/run/current-system/sw/bin/niri-session";
+            prettyName = "Niri";
+            comment = "Scrollable-tiling Wayland compositor";
+            binPath = "${cfg.package}/bin/niri-session";
           };
         };
       };
@@ -78,23 +71,24 @@ in
     (mkIf cfg.withXDG {
       xdg.portal = {
         enable = true;
+
         extraPortals = with pkgs; [
-          xdg-desktop-portal-gnome
           xdg-desktop-portal-gtk
+          xdg-desktop-portal-gnome
         ];
+
         config = {
           niri = lib.mkDefault {
             default = [
-              "gnome"
               "gtk"
+              "gnome"
             ];
+
             "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
-            "org.freedesktop.impl.portal.Access" = [ "gtk" ];
             "org.freedesktop.impl.portal.Notification" = [ "gtk" ];
             "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
           };
         };
-        configPackages = [ cfg.package ];
       };
     })
 
