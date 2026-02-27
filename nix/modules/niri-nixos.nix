@@ -10,7 +10,7 @@ let
   cfg = config.programs.niriBlur;
 in
 {
-  options.programs.niriBlur = lib.mkDefault {
+  options.programs.niriBlur = {
     enable = lib.mkEnableOption "Custom Niri with overlay";
 
     withUWSM = lib.mkEnableOption "Enable UWSM support";
@@ -18,6 +18,7 @@ in
     withXDG = lib.mkEnableOption "Enable XDG portal support" // {
       default = true;
     };
+
     useThunar = lib.mkEnableOption "Use Thunar integration" // {
       default = true;
     };
@@ -28,17 +29,20 @@ in
     # Apply overlay
     nixpkgs.overlays = [ overlay ];
 
-    # Use overlay niri
-    programs.niri.package = pkgs.niriPackages.niri;
+    # Enable upstream Niri module properly
+    programs.niri = {
+      enable = true;
+      package = pkgs.niriPackages.niri;
+    };
 
-    # Make session available
     services.displayManager.sessionPackages = [
       pkgs.niriPackages.niri
     ];
+
     services.xserver.desktopManager.runXdgAutostartIfNone = lib.mkDefault true;
 
     services.dbus.packages = lib.mkIf cfg.useThunar [ pkgs.thunar ];
-    # Required basics
+
     security.polkit.enable = true;
     programs.dconf.enable = lib.mkDefault true;
     services.gnome.gnome-keyring.enable = lib.mkDefault true;
@@ -66,7 +70,7 @@ in
         xdg-desktop-portal-gnome
       ];
 
-      config.niri = lib.mkDefault {
+      config.niri = {
         default = [
           "gtk"
           "gnome"
