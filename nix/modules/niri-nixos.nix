@@ -21,7 +21,7 @@ in
 
     package = mkPackageOption pkgs "niri" { };
 
-    useNautilus = mkEnableOption "Nautilus as file chooser" // {
+    useThunar = mkEnableOption "Nautilus as file chooser" // {
       default = true;
     };
 
@@ -43,7 +43,7 @@ in
         cfg.package
       ];
 
-      services.dbus.packages = mkIf cfg.useNautilus [ pkgs.nautilus ];
+      services.dbus.packages = mkIf cfg.useThunar [ pkgs.thunar ];
 
       services = {
         displayManager.sessionPackages = [ cfg.package ];
@@ -67,7 +67,7 @@ in
         enable = true;
         waylandCompositors = {
           niri = {
-            prettyName = "Niri";
+            prettyName = "Niri The Goat";
             comment = "A scrollable-tiling Wayland compositor";
             binPath = "/run/current-system/sw/bin/niri-session";
           };
@@ -78,13 +78,22 @@ in
     (mkIf cfg.withXDG {
       xdg.portal = {
         enable = true;
-        xdgOpenUsePortal = lib.mkDefault true;
-
         extraPortals = with pkgs; [
           xdg-desktop-portal-gnome
           xdg-desktop-portal-gtk
         ];
-
+        config = {
+          niri = lib.mkDefault {
+            default = [
+              "gnome"
+              "gtk"
+            ];
+            "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+            "org.freedesktop.impl.portal.Access" = [ "gtk" ];
+            "org.freedesktop.impl.portal.Notification" = [ "gtk" ];
+            "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
+          };
+        };
         configPackages = [ cfg.package ];
       };
     })
