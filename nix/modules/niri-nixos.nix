@@ -1,8 +1,8 @@
 {
-  lib,
   pkgs,
   config,
   overlay,
+  lib,
   ...
 }:
 
