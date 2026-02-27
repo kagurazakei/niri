@@ -10,7 +10,7 @@ let
   cfg = config.programs.niriBlur;
 in
 {
-  options.programs.niri = lib.mkDefault {
+  options.programs.niriBlur = lib.mkDefault {
     enable = lib.mkEnableOption "Custom Niri with overlay";
 
     withUWSM = lib.mkEnableOption "Enable UWSM support";
